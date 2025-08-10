@@ -1,5 +1,5 @@
 /* =========================
-   0) 리셋/기본 박스모델
+   CSS Reset & Box Model
    ========================= */
 *,
 *::before,
@@ -7,176 +7,232 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
 }
 
 /* =========================
-   1) 테마/타이포 변수
-   - clamp(min, viewport-based, max)
-   - 숫자만 조절해서 전역 폰트 크기 관리
+   CSS Variables & Theme
    ========================= */
 :root {
-  /* 폰트 패밀리/색상(다크 기본) */
+  /* 폰트 및 색상 (다크모드 기본) */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: light dark;
   color: rgba(73, 69, 69, 0.87);
-  background-color: #fdfaef;
+  background-color: #dfeef5;
 
-  /* 타이포 크기 변수 */
-  --fs-body: 13px;     /* 본문 기본 */
-  --fs-small: clamp(12px, 3vw, 14px); /* 작은 텍스트 */
-  --fs-h1: 35px;     /* 제목 */
+  /* 타이포그래피 크기 */
+  --fs-body: 12px;
+  --fs-small: clamp(12px, 3vw, 14px);
+  --fs-h1: 34px;
 
-  /* 간격/레이아웃 */
+  /* 레이아웃 변수 */
   --radius: 12px;
   --container-max: 720px;
   --space-1: 8px;
   --space-2: 12px;
   --space-3: 16px;
+
+  /* 색상 변수 */
+  --color-primary: #e43900;
+  --color-primary-hover: #ff0d00;
+  --color-border: #ccc;
+  --color-button-bg: #b2dcff;
+  --color-button-border: #646cff;
 }
 
-/* 라이트 모드 색상 오버라이드 */
+/* 라이트모드 색상 오버라이드 */
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
+    --color-border: #eee;
+    --color-button-bg: #f9f9f9;
   }
 }
 
 /* =========================
-   2) 기본 타이포
+   Typography
    ========================= */
-html, body {
+html,
+body {
   font-size: var(--fs-body);
   line-height: 1.45;
 }
 
-html { scrollbar-gutter: stable both-edges; }
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
 @supports not (scrollbar-gutter: stable) {
-  html { overflow-y: scroll;} 
+  html {
+    overflow-y: scroll;
+  }
 }
 
 h1 {
   font-size: var(--fs-h1);
   line-height: 1.2;
-  /* 👉 요청: h1 위아래 여백 넓히기 */
-  margin: 16px 0 12px;
+  margin: var(--space-3) 0 var(--space-2);
 }
 
-p, li, input, button {
-  font-size: 1em; /* 본문 크기를 따라감 */
+p,
+li,
+input,
+button {
+  font-size: 1em;
 }
 
-/* 링크 색상 */
+/* 링크 스타일 */
 a {
   font-weight: 500;
-  color: #e43900;
+  color: var(--color-primary);
   text-decoration: none;
+  transition: color 0.25s ease;
 }
+
 a:hover {
-  color: #ff0d00;
+  color: var(--color-primary-hover);
 }
 
 /* =========================
-   3) 레이아웃
+   Layout
    ========================= */
 body {
   display: flex;
-  justify-content: center;  /* 가로 가운데 */
-  align-items: flex-start;   /* 세로 위쪽 정렬 */
+  justify-content: center;
+  align-items: flex-start;
   min-height: 100vh;
   width: 100%;
-  overflow-x: hidden;        /* 가로 넘침 방지 */
+  overflow-x: hidden;
 }
 
-/* 앱 컨테이너 */
 .app-wrap {
-  padding: 10px 10px; /* ← px 단위로 수정 */
+  padding: 10px;
   max-width: var(--container-max);
   width: 100%;
-  /* margin: 0 auto;
-  overflow-wrap: anywhere;   긴 단어 줄바꿈 허용 */
+  overflow-wrap: anywhere;
 }
 
-/* 데스크톱(넓은 화면)에서는 픽셀로 고정 → 좌우 여백 흔들림 방지 */
-/* @media (min-width: 560px) {
-  .app-wrap { width: 520px; max-width: none; }
-}
-
+/* 반응형 레이아웃 */
 @media (max-width: 420px) {
-  input, select, textarea {
-    font-size: 16px;
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* iOS 줌 방지 */
   }
-  .app-wrap { padding: var(--space-2); }
-} */
+  
+  .app-wrap {
+    padding: var(--space-2);
+  }
+}
 
 /* =========================
-   4) 폼/버튼
+   Form Elements
    ========================= */
-input, button {
-  padding: 0.6em 0.7em; /* em 단위 → 폰트 크기에 비례 */
+input,
+button {
+  padding: 0.6em 0.7em;
   max-width: 100%;
+  font-family: inherit;
 }
 
 input {
-  background-color:  #fff;
+  width: 100%;
+  background-color: #fff;
   color: #000;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  transition: border-color 0.25s ease;
 }
 
-@media (prefers-color-scheme: dark){
+input:focus {
+  outline: 2px solid var(--color-button-border);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
   input {
     background-color: #ffffff;
     color: #000000;
-    border: 1px solid #555;
+    border-color: #555;
   }
 }
 
 button {
-  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid transparent;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #b2dcff;
+  background-color: var(--color-button-bg);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.25s ease;
 }
-button:hover { border-color: #646cff; }
-button:focus,
-button:focus-visible { outline: 4px auto -webkit-focus-ring-color; }
 
-@media (prefers-color-scheme: light) {
-  button { background-color: #f9f9f9; }
+button:hover {
+  border-color: var(--color-button-border);
+  transform: translateY(-1px);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+button:active {
+  transform: translateY(0);
 }
 
 /* =========================
-   5) 리스트/유틸
+   Lists & Utilities
    ========================= */
-ul { padding-left: 1.1em; }
-li { margin: 0.25em 0; }
-
-/* 카드(박스) 스타일이 필요하면 이렇게 재사용 가능)
-.card {
-  padding: var(--space-2);
-  border: 0.5px solid #eee;
-  border-radius: var(--radius);
+ul {
+  padding-left: 1.1em;
 }
-.small { font-size: var(--fs-small); }
-*/
 
-input[type="text"], input[type="search"], input {
-  width: 100%;
-  box-sizing: border-box;
+li {
+  margin: 0.25em 0;
 }
-form, .input-wrap {
+
+form,
+.input-wrap {
   width: 100%;
 }
 
+/* =========================
+   Root Element Override
+   ========================= */
 #root {
   max-width: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* =========================
+   Utility Classes
+   ========================= */
+.card {
+  padding: var(--space-2);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.small {
+  font-size: var(--fs-small);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

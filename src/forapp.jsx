@@ -1,417 +1,362 @@
 import { useEffect, useState } from "react";
 
-// 유틸리티 함수
-const formatDate = (iso) => {
-  const date = new Date(iso);
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-  const dayName = dayNames[date.getDay()];
-  return `${date.getMonth() + 1}/${date.getDate()}(${dayName})`;
+
+const fmtDate = (iso) => {
+  const d = new Date(iso);
+  const yoil = ["일","월","화","수","목","금","토"][d.getDay()];
+  return `${d.getMonth()+1}/${d.getDate()}(${yoil})`;
 };
 
-// API 관련 상수
-const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
-const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
-const MIN_CITY_LENGTH = 3;
-const AUTOCOMPLETE_DELAY = 300;
-
-// 서울 좌표 (폴백용)
-const SEOUL_COORDS = {
-  lat: 37.5665,
-  lon: 126.9780,
-  label: "Seoul",
-  country: "KR",
-};
 
 export default function App() {
-  // 입력 상태
+  // 1) 입력/조회 기본 상태
   const [city, setCity] = useState("");
   const [target, setTarget] = useState("");
+  const [loading, setLoading] = useState(false); // 지오코딩 로딩
+  const [error, setError] = useState(""); // 지오코딩 에러
+  const [coords, setCoords] = useState(null); // {lat, lon, label, country}
   
-  // 지오코딩 상태
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [coords, setCoords] = useState(null);
+  // 2) 4단계: 날씨 API 상태
+  const [wLoading, setWLoading] = useState(false); // 예보 로딩
+  const [wError, setWError] = useState(""); // 예보 에러
+  const [current, setCurrent] = useState(null); // 현재 날씨
+  const [daily, setDaily] = useState([]); // 5일 예보
   
-  // 날씨 상태
-  const [weatherLoading, setWeatherLoading] = useState(false);
-  const [weatherError, setWeatherError] = useState("");
-  const [currentWeather, setCurrentWeather] = useState(null);
-  const [dailyForecast, setDailyForecast] = useState([]);
-  
-  // 자동완성 상태
   const [candidates, setCandidates] = useState([]);
-  const [isManualSelection, setIsManualSelection] = useState(false);
-
-  // 후보 선택 핸들러
-  const handleCandidateSelect = (candidate) => {
+  const [manualPick, setManualPick] = useState(false);
+  
+  function onPickCandidate(c) {
     setError("");
-    setIsManualSelection(true);
-    setCoords(candidate);
-    setTarget(candidate.label);
+    setManualPick(true);
+    setCoords(c);
+    setTarget(c.label);
     setCandidates([]);
-  };
-
-  // 폼 제출 핸들러
-  const handleSubmit = (e) => {
+  }
+  // 3) 제출 핸들러 (입력값 확정 --> target으로 저장)
+  const onSubmit = (e) => {
     e.preventDefault();
-    const trimmedCity = city.trim();
-    
-    if (trimmedCity.length < MIN_CITY_LENGTH) {
+    const next = city.trim();
+    if (next.length < 3) {            // ★ 추가: 3글자 미만이면 막기
       setError("도시명은 3글자 이상 입력해주세요.");
       return;
     }
-    
-    setTarget(trimmedCity);
+    setTarget(next);
+    // 필요하면 주석 해제해서 입력창 비우기
+    // setCity(""); 
   };
-
-  // 지오코딩 API 호출
-  const fetchGeocoding = async (cityName) => {
-    const url = new URL(GEOCODING_API_URL);
-    url.searchParams.set("name", cityName);
-    url.searchParams.set("count", "5");
-    url.searchParams.set("language", "ko");
-    url.searchParams.set("format", "json");
-
-    const response = await fetch(url.toString());
-    if (!response.ok) throw new Error("지오코딩 요청 실패");
-    
-    return response.json();
-  };
-
-  // 날씨 API 호출
-  const fetchWeather = async (coordinates) => {
-    const url = new URL(WEATHER_API_URL);
-    url.searchParams.set("latitude", coordinates.lat);
-    url.searchParams.set("longitude", coordinates.lon);
-    url.searchParams.set("timezone", "auto");
-    url.searchParams.set("forecast_days", "5");
-    url.searchParams.set(
-      "current",
-      "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
-    );
-    url.searchParams.set(
-      "daily",
-      "temperature_2m_max,temperature_2m_min,weather_code"
-    );
-
-    const response = await fetch(url.toString());
-    if (!response.ok) throw new Error("예보 API 실패");
-    
-    return response.json();
-  };
-
-  // 지오코딩 효과
+  
+  // 4) 지오코딩: target이 바뀔 때 좌표 조회 (Open-Meteo, 실패 시 서울 폴백)
   useEffect(() => {
     if (!target) return;
 
-    let isCancelled = false;
+    let cancelled = false; // 언마운트/변경 간 경합 방지
 
-    const performGeocoding = async () => {
+    const fetchGeocoding = async () => {
       // 수동 선택 직후엔 지오코딩 스킵
-      if (isManualSelection) {
-        setIsManualSelection(false);
-        return;
-      }
+      if (manualPick) { setManualPick(false); return; }
 
       setLoading(true);
       setError("");
       setCoords(null);
 
       try {
-        const data = await fetchGeocoding(target);
-        
-        const locations = (data.results || []).map(result => ({
-          lat: result.latitude,
-          lon: result.longitude,
-          label: result.name,
-          country: result.country || ""
+        const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+        url.searchParams.set("name", target);
+        url.searchParams.set("count", "5");
+        url.searchParams.set("language", "ko");
+        url.searchParams.set("format", "json");
+
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("지오코딩 요청 실패");
+        const data = await res.json();
+
+        const list = (data.results || []).map(r => ({
+          lat: r.latitude,
+          lon: r.longitude,
+          label: r.name,
+          country: r.country || ""
         }));
+        if (!list.length) throw new Error("해당 도시를 찾지 못했습니다.");
 
-        if (!locations.length) {
-          throw new Error("해당 도시를 찾지 못했습니다.");
+        const q = target.toLowerCase();
+        const starts = list.filter(i => i.label.toLowerCase().startsWith(q));
+        // 앞부분 일치가 없으면 첫 결과 사용
+        const pick = starts[0] ?? list[0];
+
+        if (!cancelled) {
+          setCoords(pick);
+          setError(""); // 성공 시 에러 지우기
         }
-
-        // 입력값과 가장 유사한 결과 선택
-        const query = target.toLowerCase();
-        const exactMatch = locations.filter(location => 
-          location.label.toLowerCase().startsWith(query)
-        );
-        const selectedLocation = exactMatch[0] || locations[0];
-
-        if (!isCancelled) {
-          setCoords(selectedLocation);
-          setError("");
-        }
-      } catch (err) {
-        if (!isCancelled) {
-          setError(err.message || "지오코딩 실패: 임시로 서울 좌표 사용");
-          setCoords(SEOUL_COORDS);
+      } catch (e) {
+        if (!cancelled) {
+          // 폴백: 학습 계속 가능하게 서울 좌표
+          setError(e.message || "지오코딩 실패: 임시로 서울 좌표 사용");
+          setCoords({
+            lat: 37.5665,
+            lon: 126.9780,
+            label: "Seoul",
+            country: "KR",
+          });
         }
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
-    performGeocoding();
-    return () => { isCancelled = true; };
-  }, [target, isManualSelection]);
+    fetchGeocoding();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]); // manualPick은 내부에서 즉시 false로 되돌려서 deps에 안 넣어도 돼
 
-  // 날씨 조회 효과
+
+  // 5) 예보 호출: coords 준비되면 현재 + 5일 데이터 가져오기
   useEffect(() => {
     if (!coords) return;
 
-    let isCancelled = false;
-
-    const fetchWeatherData = async () => {
-      setWeatherLoading(true);
-      setWeatherError("");
-      setCurrentWeather(null);
-      setDailyForecast([]);
+    let cancelled = false;
+    
+    const run = async () => {
+      setWLoading(true);
+      setWError("");
+      setCurrent(null);
+      setDaily([]);
 
       try {
-        const weatherData = await fetchWeather(coords);
+        const url = new URL("https://api.open-meteo.com/v1/forecast");
+        url.searchParams.set("latitude", coords.lat);
+        url.searchParams.set("longitude", coords.lon);
+        url.searchParams.set("timezone", "auto");
+        url.searchParams.set(
+          "current",
+          "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
+        );
 
-        if (!isCancelled) {
-          // 현재 날씨 설정
-          setCurrentWeather({
-            temp: weatherData.current?.temperature_2m,
-            feels: weatherData.current?.apparent_temperature,
-            humidity: weatherData.current?.relative_humidity_2m,
-            wind: weatherData.current?.wind_speed_10m,
-            code: weatherData.current?.weather_code,
+        url.searchParams.set(
+          "daily",
+          "temperature_2m_max,temperature_2m_min,weather_code"
+        );
+
+        url.searchParams.set("forecast_days", "5");
+
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("예보 API 실패");
+        const w = await res.json();
+
+        if (!cancelled) {
+          setCurrent({
+            temp: w.current?.temperature_2m,
+            feels: w.current?.apparent_temperature,
+            rh: w.current?.relative_humidity_2m,
+            wind: w.current?.wind_speed_10m,
+            code: w.current?.weather_code,
           });
 
-          // 5일 예보 설정
-          const forecast = (weatherData.daily?.time || []).map((date, index) => ({
-            date,
-            label: formatDate(date),
-            tempMin: weatherData.daily?.temperature_2m_min?.[index],
-            tempMax: weatherData.daily?.temperature_2m_max?.[index],
-            code: weatherData.daily?.weather_code?.[index],
-          }));
+        const list = (w.daily?.time || []).map((d, i) => ({
+          date: d,
+          label: fmtDate(d), // ← 보기 좋은 날짜(요일 포함)
+          tmin: w.daily?.temperature_2m_min?.[i],
+          tmax: w.daily?.temperature_2m_max?.[i],
+          code: w.daily?.weather_code?.[i],
+        }));
 
-          setDailyForecast(forecast);
+          setDaily(list);
         }
-      } catch (err) {
-        if (!isCancelled) {
-          setWeatherError(err.message || "예보를 불러오지 못했습니다.");
-        }
+      } catch (e) {
+        if (!cancelled) setWError(e.message || "예보를 불러오지 못했습니다." );
       } finally {
-        if (!isCancelled) {
-          setWeatherLoading(false);
-        }
+        if (!cancelled) setWLoading(false);
       }
     };
 
-    fetchWeatherData();
-    return () => { isCancelled = true; };
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, [coords]);
-
-  // 자동완성 효과
+  
+  // [추가] 자동완성 후보 가져오기
   useEffect(() => {
-    const trimmedCity = city.trim();
-    
-    if (trimmedCity.length < MIN_CITY_LENGTH) {
-      setCandidates([]);
-      return;
-    }
+    const name = city.trim();
+    if (name.length < 3) { setCandidates([]); return;}
 
-    const timeoutId = setTimeout(async () => {
+    const t = setTimeout(async () => {
       try {
-        const data = await fetchGeocoding(trimmedCity);
+        const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+        url.searchParams.set("name", name);
+        url.searchParams.set("count", 5);
+        url.searchParams.set("language", "ko");
+        url.searchParams.set("format", "json");
         
-        const candidateList = (data.results || []).map(result => ({
-          lat: result.latitude,
-          lon: result.longitude,
-          label: result.name,
-          country: result.country || "",
-          code: result.country_code || "",
-          detail: [result.admin1, result.admin2, result.country]
-            .filter(Boolean)
-            .join(" / "),
-        }));
-        
-        setCandidates(candidateList);
-      } catch (err) {
-        console.error("자동완성 오류:", err);
-        setCandidates([]);
-      }
-    }, AUTOCOMPLETE_DELAY);
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("지오코딩 요청 실패");
+        const data = await res.json();
 
-    return () => clearTimeout(timeoutId);
+        const items = (data.results || []).map(r => ({
+          lat: r.latitude,
+          lon: r.longitude,
+          label: r.name,
+          country: r.country || "",
+          code: r.country_code || "",
+          detail: [r.admin1, r.admin2, r.country].filter(Boolean).join(" / "),
+        }));
+        setCandidates(items);
+        } catch (e) {
+          console.error(e); // 디버그용
+          setCandidates([]);
+        }
+    }, 300);
+    
+    return () => clearTimeout(t);
   }, [city]);
 
-  // 스타일 객체
-  const styles = {
-    container: { 
-      fontFamily: "Arial, sans-serif",
-      maxWidth: "600px",
-      margin: "0 auto",
-      padding: "20px"
-    },
-    inputContainer: { position: "relative" },
-    input: { width: "100%", padding: "8px", fontSize: "16px" },
-    button: { 
-      marginTop: "6px", 
-      padding: "8px 16px",
-      backgroundColor: "#007bff",
-      color: "white",
-      border: "none",
-      borderRadius: "4px",
-      cursor: "pointer"
-    },
-    autocompleteContainer: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      top: "100%",
-      marginTop: "6px",
-      border: "1px solid #b1c8ff",
-      borderRadius: "8px",
-      padding: "6px",
-      background: "rgba(221, 240, 255, 0.93)",
-      maxHeight: "40vh",
-      overflowY: "auto",
-      zIndex: 10,
-    },
-    candidateButton: {
-      display: "block",
-      width: "100%",
-      textAlign: "left",
-      padding: "6px 8px",
-      border: "1px solid #b1c8ff",
-      borderRadius: "6px",
-      background: "transparent",
-      cursor: "pointer",
-      marginBottom: "6px",
-    },
-    infoBox: {
-      marginTop: "8px",
-      padding: "12px",
-      border: "1px solid #b1c8ff",
-      borderRadius: "12px",
-      backgroundColor: "#f8f9fa"
-    },
-    errorText: { color: "crimson" },
-    statusText: { margin: "4px 0" }
-  };
-
+  // 6) 렌더
   return (
-    <div style={styles.container}>
+    <div className="app-wrap">
       <h1>날씨를 알아보자</h1>
 
-      {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
-        <div style={styles.inputContainer}>
+      {/* 입력/조회 영역 */}
+      <form onSubmit={onSubmit} style={{marginTop: 20}}>        
+        <div style={{ position: "relative" }}>
           <input
-            style={styles.input}
             placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
             value={city}
             onChange={(e) => setCity(e.target.value)}
+            style={{ width: "100%"}}
           />
 
-          {/* 자동완성 목록 */}
-          {candidates.length > 0 && (
-            <div style={styles.autocompleteContainer}>
-              {candidates.map((candidate) => (
-                <button
-                  key={`${candidate.label}-${candidate.lat}-${candidate.lon}`}
-                  style={styles.candidateButton}
-                  onClick={() => handleCandidateSelect(candidate)}
-                  type="button"
-                >
-                  <strong>{candidate.label}</strong>
-                  {candidate.country && <span>, {candidate.country}</span>}
-                  {candidate.code && <span> ({candidate.code})</span>}
-                  {candidate.detail && (
-                    <span style={{ color: "#727272" }}> — {candidate.detail}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* [추가] 자동완성 목록 / 절대 배치 */}
+        {candidates.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top : "100%",
+              marginTop: 6,
+              border: "1px solid #b1c8ffff",
+              borderRadius: 8,
+              padding: 6,
+              background: "rgba(221, 240, 255, 0.93)",
+              maxHeight: "40vh",
+              overflowY: "auto",
+              zIndex: 10,
+            }}
+          >
+            {candidates.map((c) => (
+              <button
+                key={`${c.label}-${c.lat}-${c.lon}`}
+                onClick={() => onPickCandidate(c)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  textAlign: "left",
+                  padding: "6px 8px",
+                  border: "1px solid #b1c8ffff",
+                  borderRadius:6,
+                  background: "transparent",
+                  cursor: "pointer",
+                  marginBottom: 6,
+                }}
+              >
+                <strong style={{ color: "#000"}}>{c.label}</strong>
+                {c.country ? <span style={{color: "#000"}}>, {c.country}</span> : ""}
+                {/* {c.country ? <span style={{ color: "#000"}}> ({c.country})</span> : ""} */}
+                {c.code ? <span style={{ color: "#000"}}> ({c.code})</span> : ""}
+                {c.detail ? <span style={{ color: "#727272ff"}}> — {c.detail}</span> : null}
+              </button>
+            ))}
+          </div>
+      )}
+    </div>
 
-        <button type="submit" style={styles.button}>
-          조회
-        </button>
-      </form>
+    <button type="submit" style={{ marginTop: 6}}>
+    조회
+    </button>
+  </form>
 
       {/* 상태 미리보기 */}
-      <div style={{ marginTop: "16px" }}>
-        <p style={styles.statusText}>
+      <div style={{ marginTop: 8 }}>
+        <p>
           입력 중: <strong>{city || "없음"}</strong>
         </p>
-        <p style={styles.statusText}>
+        <p>
           조회 대상: <strong>{target || "미정"}</strong>
         </p>
       </div>
 
-      {/* 지오코딩 결과 */}
-      <div style={{ marginTop: "16px" }}>
+      {/* 지오코딩 상태 */}
+      <div style={{ marginTop: 8 }}>
         {loading && <p>위치 찾는 중...</p>}
-        {error && <p style={styles.errorText}>{error}</p>}
+        {error && <p style={{ color: "crimson" }}>{error}</p>}
         {coords && !loading && (
-          <div style={styles.infoBox}>
+          <div
+            style={{
+              marginTop: 8,
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
+              borderRadius: 12,
+            }}
+          >
             <p>
-              <strong>도시:</strong> {coords.label}
-              {coords.country && `, ${coords.country}`}
+              도시: <strong>{coords.label}</strong>
+              {coords.country ? `, ${coords.country}` : ""}
             </p>
-            <p><strong>위도:</strong> {coords.lat}</p>
-            <p><strong>경도:</strong> {coords.lon}</p>
+            <p>위도: {coords.lat}</p>
+            <p>경도: {coords.lon}</p>
           </div>
         )}
       </div>
+  
+      {/* [추가] 날씨/예보 표시 */}
+      <div style={{ marginTop: 8}}>
+        {wLoading && <p>날씨 불러오는 중...</p>}
+        {wError && <p style={{ color: "crimson"}}>{wError}</p>}
 
-      {/* 날씨 정보 */}
-      <div style={{ marginTop: "16px" }}>
-        {weatherLoading && <p>날씨 불러오는 중...</p>}
-        {weatherError && <p style={styles.errorText}>{weatherError}</p>}
-
-        {/* 현재 날씨 */}
-        {currentWeather && !weatherLoading && !weatherError && (
-          <div style={styles.infoBox}>
-            <h3>현재 날씨</h3>
+        {current && !wLoading && !wError && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
+              borderRadius: 12,
+            }}
+          >
             <p>
-              <strong>기온:</strong> {' '}
-              {currentWeather.temp != null 
-                ? `${Math.round(currentWeather.temp)}°C` 
-                : "-"}
+              현재기온: <strong>
+                {current.temp != null ? Math.round(current.temp) + "°C" : "-"}
+              </strong>
             </p>
             <p>
-              <strong>체감:</strong> {' '}
-              {currentWeather.feels != null 
-                ? `${Math.round(currentWeather.feels)}°C` 
-                : "-"} {' '}
-              | <strong>습도:</strong> {' '}
-              {currentWeather.humidity != null 
-                ? `${currentWeather.humidity}%` 
-                : "-"} {' '}
-              | <strong>바람:</strong> {' '}
-              {currentWeather.wind != null 
-                ? `${currentWeather.wind} m/s` 
-                : "-"}
+              체감: {current.feels != null ? Math.round(current.feels) + "°" : "-"} / 
+              습도: {current.rh != null ? current.rh + "%" : "-"} / 
+              바람: {current.wind != null ? current.wind + " m/s" : "-"}
             </p>
           </div>
         )}
 
-        {/* 5일 예보 */}
-        {dailyForecast.length > 0 && !weatherLoading && !weatherError && (
-          <div style={styles.infoBox}>
-            <h3>5일 예보</h3>
-            <ul style={{ paddingLeft: "20px" }}>
-              {dailyForecast.map((day) => (
-                <li key={day.date} style={{ marginBottom: "4px" }}>
-                  <strong>{day.label}</strong> - {' '}
-                  {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
+        {daily.length > 0 && !wLoading && !wError && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
+              borderRadius: 12,
+            }}
+          >
+            <p>
+              <strong>5일 예보</strong>
+            </p>
+            <ul>
+              {daily.map((d) => (
+                  <li key={d.date}>
+                {d.label} - {Math.round(d.tmin)}° / {Math.round(d.tmax)}°
                 </li>
               ))}
             </ul>
           </div>
         )}
-      </div>
+      </div>    
     </div>
   );
 }
