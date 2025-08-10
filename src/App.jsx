@@ -215,53 +215,65 @@ export default function App() {
       <h1>날씨를 알아보자</h1>
 
       {/* 입력/조회 영역 */}
-      <form onSubmit={onSubmit} style={{marginTop: 20}}>
-        <input
-          placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          style={{ width: "100%"}}
-        />
-        <button type="submit" style={{ marginTop: 12}}>
-          조회
-        </button>
-      </form>
+      <form onSubmit={onSubmit} style={{marginTop: 20}}>        
+        <div style={{ position: "relative" }}>
+          <input
+            placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            style={{ width: "100%"}}
+          />
 
-      {/* [추가] 자동완성 목록 */}
-      {candidates.length > 0 && (
-        <div
-          style={{
-            marginTop: 6,
-            border: "1px solid #444",
-            borderRadius: 8,
-            padding: 6,
-            background: "rgba(0,0,0,0.2)",
-          }}
-        >
-          {candidates.map((c) => (
-            <button
-              key={`${c.label}-${c.lat}-${c.lon}`}
-              onClick={() => onPickCandidate(c)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "6px 8px",
-                border: "1px solid #333",
-                borderRadius:6,
-                background: "transparent",
-                cursor: "pointer",
-                marginBottom: 6,
-              }}
-            >
-              <strong>{c.label}</strong>
-              {c.country ? `, ${c.country}` : ""} {c.code ? `(${c.code})` : ""}
-              {c.detail ? <span style={{ color: "#999"}}> — {c.detail}</span> : null}
-            </button>
-          ))}
-        </div>
+        {/* [추가] 자동완성 목록 / 절대 배치 */}
+        {candidates.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top : "100%",
+              marginTop: 6,
+              border: "1px solid #b1c8ffff",
+              borderRadius: 8,
+              padding: 6,
+              background: "rgba(221, 240, 255, 0.93)",
+              maxHeight: "40vh",
+              overflowY: "auto",
+              zIndex: 10,
+            }}
+          >
+            {candidates.map((c) => (
+              <button
+                key={`${c.label}-${c.lat}-${c.lon}`}
+                onClick={() => onPickCandidate(c)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  textAlign: "left",
+                  padding: "6px 8px",
+                  border: "1px solid #b1c8ffff",
+                  borderRadius:6,
+                  background: "transparent",
+                  cursor: "pointer",
+                  marginBottom: 6,
+                }}
+              >
+                <strong style={{ color: "#000"}}>{c.label}</strong>
+                {c.country ? <span style={{color: "#000"}}>, {c.country}</span> : ""}
+                {/* {c.country ? <span style={{ color: "#000"}}> ({c.country})</span> : ""} */}
+                {c.code ? <span style={{ color: "#000"}}> ({c.code})</span> : ""}
+                {c.detail ? <span style={{ color: "#727272ff"}}> — {c.detail}</span> : null}
+              </button>
+            ))}
+          </div>
       )}
+    </div>
 
+    <button type="submit" style={{ marginTop: 6}}>
+    조회
+    </button>
+  </form>
 
       {/* 상태 미리보기 */}
       <div style={{ marginTop: 8 }}>
@@ -281,8 +293,8 @@ export default function App() {
           <div
             style={{
               marginTop: 8,
-              padding: "4px 8px",
-              border: "0.5px solid #eee",
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
               borderRadius: 12,
             }}
           >
@@ -305,8 +317,8 @@ export default function App() {
           <div
             style={{
               marginTop: 8,
-              padding: "4px 8px",
-              border: "0.5px solid #eee",
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
               borderRadius: 12,
             }}
           >
@@ -327,8 +339,8 @@ export default function App() {
           <div
             style={{
               marginTop: 8,
-              padding: "4px 8px",
-              border: "0.5px solid #eee",
+              padding: "1px 8px",
+              border: "1px solid #b1c8ffff",
               borderRadius: 12,
             }}
           >

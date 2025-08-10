@@ -21,17 +21,17 @@ html, body {
   /* 폰트 패밀리/색상(다크 기본) */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: rgba(73, 69, 69, 0.87);
+  background-color: #fdfaef;
 
   /* 타이포 크기 변수 */
-  --fs-body: clamp(12px, 3.5vw, 13px);     /* 본문 기본 */
+  --fs-body: 13px;     /* 본문 기본 */
   --fs-small: clamp(12px, 3vw, 14px); /* 작은 텍스트 */
-  --fs-h1: clamp(30px, 10vw, 35px);     /* 제목 */
+  --fs-h1: 35px;     /* 제목 */
 
   /* 간격/레이아웃 */
   --radius: 12px;
-  --container-max: 520px;
+  --container-max: 720px;
   --space-1: 8px;
   --space-2: 12px;
   --space-3: 16px;
@@ -53,11 +53,16 @@ html, body {
   line-height: 1.45;
 }
 
+html { scrollbar-gutter: stable both-edges; }
+@supports not (scrollbar-gutter: stable) {
+  html { overflow-y: scroll;} 
+}
+
 h1 {
   font-size: var(--fs-h1);
   line-height: 1.2;
   /* 👉 요청: h1 위아래 여백 넓히기 */
-  margin: clamp(12px, 4vw, 24px) 0 clamp(8px, 3vw, 16px);
+  margin: 16px 0 12px;
 }
 
 p, li, input, button {
@@ -67,11 +72,11 @@ p, li, input, button {
 /* 링크 색상 */
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #e43900;
   text-decoration: none;
 }
 a:hover {
-  color: #535bf2;
+  color: #ff0d00;
 }
 
 /* =========================
@@ -88,16 +93,24 @@ body {
 
 /* 앱 컨테이너 */
 .app-wrap {
-  padding: var(--space-3);
+  padding: 10px 10px; /* ← px 단위로 수정 */
   max-width: var(--container-max);
   width: 100%;
-  margin: 0 auto;
-  overflow-wrap: anywhere;   /* 긴 단어 줄바꿈 허용 */
+  /* margin: 0 auto;
+  overflow-wrap: anywhere;   긴 단어 줄바꿈 허용 */
+}
+
+/* 데스크톱(넓은 화면)에서는 픽셀로 고정 → 좌우 여백 흔들림 방지 */
+/* @media (min-width: 560px) {
+  .app-wrap { width: 520px; max-width: none; }
 }
 
 @media (max-width: 420px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
   .app-wrap { padding: var(--space-2); }
-}
+} */
 
 /* =========================
    4) 폼/버튼
@@ -107,12 +120,27 @@ input, button {
   max-width: 100%;
 }
 
+input {
+  background-color:  #fff;
+  color: #000;
+  border: 1px solid #ccc;
+}
+
+@media (prefers-color-scheme: dark){
+  input {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #555;
+  }
+}
+
 button {
+  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid transparent;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #b2dcff;
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -138,3 +166,17 @@ li { margin: 0.25em 0; }
 }
 .small { font-size: var(--fs-small); }
 */
+
+input[type="text"], input[type="search"], input {
+  width: 100%;
+  box-sizing: border-box;
+}
+form, .input-wrap {
+  width: 100%;
+}
+
+#root {
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
