@@ -15,14 +15,23 @@ export default function App() {
   const [loading, setLoading] = useState(false); // 지오코딩 로딩
   const [error, setError] = useState(""); // 지오코딩 에러
   const [coords, setCoords] = useState(null); // {lat, lon, label, country}
-
+  
   // 2) 4단계: 날씨 API 상태
   const [wLoading, setWLoading] = useState(false); // 예보 로딩
   const [wError, setWError] = useState(""); // 예보 에러
   const [current, setCurrent] = useState(null); // 현재 날씨
   const [daily, setDaily] = useState([]); // 5일 예보
-
   
+  const [candidates, setCandidates] = useState([]);
+  const [manualPick, setManualPick] = useState(false);
+  
+  function onPickCandidate(c) {
+    setError("");
+    setManualPick(true);
+    setCoords(c);
+    setTarget(c.label);
+    setCandidates([]);
+  }
   // 3) 제출 핸들러 (입력값 확정 --> target으로 저장)
   const onSubmit = (e) => {
     e.preventDefault();
@@ -35,7 +44,7 @@ export default function App() {
     // 필요하면 주석 해제해서 입력창 비우기
     // setCity(""); 
   };
-
+  
   // 4) 지오코딩: target이 바뀔 때 좌표 조회 (Open-Meteo, 실패 시 서울 폴백)
   useEffect(() => {
     if (!target) return;
@@ -43,6 +52,9 @@ export default function App() {
     let cancelled = false; // 언마운트/변경 간 경합 방지
 
     const fetchGeocoding = async () => {
+      // 수동 선택 직후엔 지오코딩 스킵
+      if (manualPick) { setManualPick(false); return; }
+
       setLoading(true);
       setError("");
       setCoords(null);
@@ -68,36 +80,34 @@ export default function App() {
 
         const q = target.toLowerCase();
         const starts = list.filter(i => i.label.toLowerCase().startsWith(q));
-        // 앞부분 일치가 없더라도, 일단 첫 결과를 사용해서 불필요한 에러 배너 방지
+        // 앞부분 일치가 없으면 첫 결과 사용
         const pick = starts[0] ?? list[0];
 
         if (!cancelled) {
           setCoords(pick);
-          setError(""); // 성공 시 에러 표시 지우기
+          setError(""); // 성공 시 에러 지우기
         }
-
-
-    } catch (e) {
-      if (!cancelled) {
-        // 폴백: 학습 계속 가능하게 서울 좌표
-        setError(e.message || "지오코딩 실패: 임시로 서울 좌표 사용");
-        setCoords({
-          lat: 37.5665,
-          lon: 126.9780,
-          label: "Seoul",
-          country: "KR",
-        });
+      } catch (e) {
+        if (!cancelled) {
+          // 폴백: 학습 계속 가능하게 서울 좌표
+          setError(e.message || "지오코딩 실패: 임시로 서울 좌표 사용");
+          setCoords({
+            lat: 37.5665,
+            lon: 126.9780,
+            label: "Seoul",
+            country: "KR",
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
+    };
 
-  fetchGeocoding();
-  return () => {
-    cancelled = true;
-  };
-}, [target]);
+    fetchGeocoding();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]); // manualPick은 내부에서 즉시 false로 되돌려서 deps에 안 넣어도 돼
+
 
   // 5) 예보 호출: coords 준비되면 현재 + 5일 데이터 가져오기
   useEffect(() => {
@@ -164,6 +174,41 @@ export default function App() {
     };
   }, [coords]);
   
+  // [추가] 자동완성 후보 가져오기
+  useEffect(() => {
+    const name = city.trim();
+    if (name.length < 3) { setCandidates([]); return;}
+
+    const t = setTimeout(async () => {
+      try {
+        const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+        url.searchParams.set("name", name);
+        url.searchParams.set("count", 5);
+        url.searchParams.set("language", "ko");
+        url.searchParams.set("format", "json");
+        
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("지오코딩 요청 실패");
+        const data = await res.json();
+
+        const items = (data.results || []).map(r => ({
+          lat: r.latitude,
+          lon: r.longitude,
+          label: r.name,
+          country: r.country || "",
+          code: r.country_code || "",
+          detail: [r.admin1, r.admin2, r.country].filter(Boolean).join(" / "),
+        }));
+        setCandidates(items);
+        } catch (e) {
+          console.error(e); // 디버그용
+          setCandidates([]);
+        }
+    }, 300);
+    
+    return () => clearTimeout(t);
+  }, [city]);
+
   // 6) 렌더
   return (
     <div className="app-wrap">
@@ -181,6 +226,42 @@ export default function App() {
           조회
         </button>
       </form>
+
+      {/* [추가] 자동완성 목록 */}
+      {candidates.length > 0 && (
+        <div
+          style={{
+            marginTop: 6,
+            border: "1px solid #444",
+            borderRadius: 8,
+            padding: 6,
+            background: "rgba(0,0,0,0.2)",
+          }}
+        >
+          {candidates.map((c) => (
+            <button
+              key={`${c.label}-${c.lat}-${c.lon}`}
+              onClick={() => onPickCandidate(c)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "6px 8px",
+                border: "1px solid #333",
+                borderRadius:6,
+                background: "transparent",
+                cursor: "pointer",
+                marginBottom: 6,
+              }}
+            >
+              <strong>{c.label}</strong>
+              {c.country ? `, ${c.country}` : ""} {c.code ? `(${c.code})` : ""}
+              {c.detail ? <span style={{ color: "#999"}}> — {c.detail}</span> : null}
+            </button>
+          ))}
+        </div>
+      )}
+
 
       {/* 상태 미리보기 */}
       <div style={{ marginTop: 8 }}>
