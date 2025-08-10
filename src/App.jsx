@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 
+
+const fmtDate = (iso) => {
+  const d = new Date(iso);
+  const yoil = ["일","월","화","수","목","금","토"][d.getDay()];
+  return `${d.getMonth()+1}/${d.getDate()}(${yoil})`;
+};
+
+
 export default function App() {
   // 1) 입력/조회 기본 상태
   const [city, setCity] = useState("");
@@ -14,7 +22,7 @@ export default function App() {
   const [current, setCurrent] = useState(null); // 현재 날씨
   const [daily, setDaily] = useState([]); // 5일 예보
 
-
+  
   // 3) 제출 핸들러 (입력값 확정 --> target으로 저장)
   const onSubmit = (e) => {
     e.preventDefault();
@@ -42,7 +50,7 @@ export default function App() {
       try {
         const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
         url.searchParams.set("name", target);
-        url.searchParams.set("count", "1");
+        url.searchParams.set("count", "5");
         url.searchParams.set("language", "ko");
         url.searchParams.set("format", "json");
 
@@ -50,28 +58,25 @@ export default function App() {
         if (!res.ok) throw new Error("지오코딩 요청 실패");
         const data = await res.json();
 
-      // 결과를 화면용 리스트로 변환
-      const list = (data.results || []).map(r => ({
-        lat: r.latitude,
-        lon: r.longitude,
-        label: r.name,
-        country: r.country || ""
-      }));
-      if (!list.length) throw new Error("해당 도시를 찾지 못했습니다.");
+        const list = (data.results || []).map(r => ({
+          lat: r.latitude,
+          lon: r.longitude,
+          label: r.name,
+          country: r.country || ""
+        }));
+        if (!list.length) throw new Error("해당 도시를 찾지 못했습니다.");
 
-      // 입력값과 앞부분 일치하는 후보만 채택
-      const q = target.toLowerCase();
-      const starts = list.filter(i => i.label.toLowerCase().startsWith(q));
-      const pick = starts[0] || null;
+        const q = target.toLowerCase();
+        const starts = list.filter(i => i.label.toLowerCase().startsWith(q));
+        // 앞부분 일치가 없더라도, 일단 첫 결과를 사용해서 불필요한 에러 배너 방지
+        const pick = starts[0] ?? list[0];
 
-      if (!pick) {
-        // 애매하면 실패 처리 (catch에서 서울 폴백 적용됨)
-        throw new Error("해당 도시를 찾지 못했습니다.");
-      }
+        if (!cancelled) {
+          setCoords(pick);
+          setError(""); // 성공 시 에러 표시 지우기
+        }
 
-      if (!cancelled) {
-        setCoords(pick);
-      }
+
     } catch (e) {
       if (!cancelled) {
         // 폴백: 학습 계속 가능하게 서울 좌표
@@ -136,12 +141,14 @@ export default function App() {
             code: w.current?.weather_code,
           });
 
-          const list = (w.daily?.time || []).map((d, i) => ({
-            date: d,
-            tmin: w.daily?.temperature_2m_min?.[i],
-            tmax: w.daily?.temperature_2m_max?.[i],
-            code: w.daily?.weather_code?.[i],
-          }));
+        const list = (w.daily?.time || []).map((d, i) => ({
+          date: d,
+          label: fmtDate(d), // ← 보기 좋은 날짜(요일 포함)
+          tmin: w.daily?.temperature_2m_min?.[i],
+          tmax: w.daily?.temperature_2m_max?.[i],
+          code: w.daily?.weather_code?.[i],
+        }));
+
           setDaily(list);
         }
       } catch (e) {
@@ -159,24 +166,24 @@ export default function App() {
   
   // 6) 렌더
   return (
-    <div style={{ padding: 20, maxWidth: 520, margin: "0 auto" }}>
-      <h1>Weather Mini - 4단계</h1>
+    <div className="app-wrap">
+      <h1>날씨를 알아보자</h1>
 
       {/* 입력/조회 영역 */}
-      <form onSubmit={onSubmit} style={{marginTop: 12}}>
+      <form onSubmit={onSubmit} style={{marginTop: 20}}>
         <input
           placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          style={{ width: "100%", padding: 8, fontSize: 16 }}
+          style={{ width: "100%"}}
         />
-        <button type="submit" style={{ marginTop: 8, padding: 8 }}>
+        <button type="submit" style={{ marginTop: 12}}>
           조회
         </button>
       </form>
 
       {/* 상태 미리보기 */}
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 8 }}>
         <p>
           입력 중: <strong>{city || "없음"}</strong>
         </p>
@@ -186,15 +193,15 @@ export default function App() {
       </div>
 
       {/* 지오코딩 상태 */}
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 8 }}>
         {loading && <p>위치 찾는 중...</p>}
         {error && <p style={{ color: "crimson" }}>{error}</p>}
         {coords && !loading && (
           <div
             style={{
               marginTop: 8,
-              padding: 12,
-              border: "1px solid #eee",
+              padding: "4px 8px",
+              border: "0.5px solid #eee",
               borderRadius: 12,
             }}
           >
@@ -209,16 +216,16 @@ export default function App() {
       </div>
   
       {/* [추가] 날씨/예보 표시 */}
-      <div style={{ marginTop: 16}}>
-        {wLoading && <p>날씨 불러우는 중...</p>}
+      <div style={{ marginTop: 8}}>
+        {wLoading && <p>날씨 불러오는 중...</p>}
         {wError && <p style={{ color: "crimson"}}>{wError}</p>}
 
         {current && !wLoading && !wError && (
           <div
             style={{
               marginTop: 8,
-              padding: 12,
-              border: "1px solid #eee",
+              padding: "4px 8px",
+              border: "0.5px solid #eee",
               borderRadius: 12,
             }}
           >
@@ -239,8 +246,8 @@ export default function App() {
           <div
             style={{
               marginTop: 8,
-              padding: 12,
-              border: "1px solid #eee",
+              padding: "4px 8px",
+              border: "0.5px solid #eee",
               borderRadius: 12,
             }}
           >
@@ -250,7 +257,7 @@ export default function App() {
             <ul>
               {daily.map((d) => (
                   <li key={d.date}>
-                {d.date} - {Math.round(d.tmin)}° / {Math.round(d.tmax)}° 
+                {d.label} - {Math.round(d.tmin)}° / {Math.round(d.tmax)}°
                 </li>
               ))}
             </ul>
