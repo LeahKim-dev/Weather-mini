@@ -41,6 +41,7 @@ export default function App() {
   // 자동완성 상태
   const [candidates, setCandidates] = useState([]);
   const [isManualSelection, setIsManualSelection] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   // 후보 선택 핸들러
   const handleCandidateSelect = (candidate) => {
@@ -49,8 +50,44 @@ export default function App() {
     setCoords(candidate);
     setTarget(candidate.label);
     setCandidates([]);
+    setSelectedIndex(-1);
   };
 
+  // 키보드 네비게이션 핸들러
+  const handleKeyDown = (e) => {
+    if (candidates.length == 0 ) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev =>
+          prev < candidates.length - 1 ? prev + 1 : 0
+        );
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev =>
+          prev > 0 ? prev - 1 : candidates.length - 1
+        );
+        break;
+
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && candidates[selectedIndex]) {
+          handleCandidatesSelect(candidates[selectedIndex]);
+        } else {
+          // 일반 폼 제출
+          handleSubmit(e);
+        }
+        break;
+
+      case 'Escape':
+        setCandidates([]);
+        setSelectedIndex(-1);
+        break;
+    }
+  };
   // 폼 제출 핸들러
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -237,6 +274,7 @@ export default function App() {
       } catch (err) {
         console.error("자동완성 오류:", err);
         setCandidates([]);
+        setSelectedIndex(-1);
       }
     }, AUTOCOMPLETE_DELAY);
 
@@ -248,19 +286,34 @@ export default function App() {
     container: { 
       fontFamily: "Arial, sans-serif",
       maxWidth: "720px",
-      margin: "0 auto",
-      padding: "10px"
+      margin: "0 4px",
+      padding: "20px 4px !important",
+      paddingLeft: "4px !important",paddingRight: "4px !important",
     },
-    inputContainer: { position: "relative" },
-    input: { width: "100%", padding: "8px", fontSize: "14px" },
+    inputContainer: { 
+      position: "relative",
+      display: "flex",
+      gap: "8px",
+      alignItems: "flex-start"
+    },
+
+    input: { 
+      flex: 1,
+      padding: "8px",
+      fontsize: "14px !important",
+    },
+      // width: "100%", padding: "8px", fontSize: "14px" },
     button: { 
-      marginTop: "6px", 
+      // marginTop: "6px", 
+      whiteSpace: "nowrap",
+      flexShrink: 0,
       padding: "4px 8px",
       backgroundColor: "#f8f9fa",
       color: "rgba(73, 69, 69, 0.87)",
       border: "1px solid #b1c8ff",
       borderRadius: "4px",
-      cursor: "pointer"
+      cursor: "pointer",
+      fontSize: "14px",
     },
     autocompleteContainer: {
       position: "absolute",
@@ -286,6 +339,11 @@ export default function App() {
       background: "transparent",
       cursor: "pointer",
       marginBottom: "6px",
+      transition: "background-color 0.2s ease",
+    },
+    candidateButtonSelected: {
+      backgroundColor: "#b1c8ff",
+      borderColor: "#8a9eff",
     },
     infoBox: {
       marginTop: "6px",
@@ -307,22 +365,30 @@ export default function App() {
       <h1 style={{ textAlign: "center" }}>날씨를 알아보자</h1>
 
       {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} style={{ marginTop: "10px" }}>
+      <form onSubmit={handleSubmit} style={{ marginTop: "8px"}}>
         <div style={styles.inputContainer}>
           <input
             style={styles.input}
             placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
             value={city}
             onChange={(e) => setCity(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
+          <button type="submit" style={styles.button}>
+            조회
+          </button>
+
 
           {/* 자동완성 목록 */}
           {candidates.length > 0 && (
             <div style={styles.autocompleteContainer}>
-              {candidates.map((candidate) => (
+              {candidates.map((candidate, index) => (
                 <button
                   key={`${candidate.label}-${candidate.lat}-${candidate.lon}`}
-                  style={styles.candidateButton}
+                  style={{
+                    ...styles.candidateButton,
+                    ...(index === selectedIndex ? styles.candidateButtonSelected : {})
+                  }}
                   onClick={() => handleCandidateSelect(candidate)}
                   type="button"
                 >
@@ -340,10 +406,6 @@ export default function App() {
             </div>
           )}
         </div>
-
-        <button type="submit" style={styles.button}>
-          조회
-        </button>
       </form>
 
       {/* 상태 미리보기 */}
@@ -373,8 +435,8 @@ export default function App() {
       </div>
 
       {/* 날씨 정보 */}
-      <div style={{ marginTop: "6px" }}>
-        {weatherLoading && <p>날씨 불러오는 중...</p>}
+      <div style={{ marginTop: "4px" }}>
+        {weatherLoading && <p style={{ fontSize: "12px", margin: "6px 0"}}>날씨 불러오는 중...</p>}
         {weatherError && <p style={styles.errorText}>{weatherError}</p>}
 
         {/* 현재 날씨 */}

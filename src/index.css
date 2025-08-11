@@ -110,7 +110,7 @@ body {
 }
 
 .app-wrap {
-  padding: 10px;
+  padding: 20px 4px !important;
   max-width: var(--container-max);
   width: 100%;
   overflow-wrap: anywhere;
@@ -121,11 +121,11 @@ body {
   input,
   select,
   textarea {
-    font-size: 16px; /* iOS 줌 방지 */
+    font-size: 14px; /* iOS 줌 방지 */
   }
   
   .app-wrap {
-    padding: var(--space-2);
+    padding: 20px 4px;
   }
 }
 
