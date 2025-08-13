@@ -39,8 +39,8 @@ body {
   --color-primary: #e43900;
   --color-primary-hover: #ff0d00;
   --color-border: #ccc;
-  --color-button-bg: #b2dcff;
-  --color-button-border: #646cff;
+  --color-button-bg: #dfeef556;
+  --color-button-border: #b1c8ff;
 }
 
 /* 라이트모드 색상 오버라이드 */
@@ -101,12 +101,14 @@ a:hover {
    Layout
    ========================= */
 body {
-  display: flex;
+  display: block-gird;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
+  padding: 25px !important;
+  margin: 0 !important;
 }
 
 .app-wrap {

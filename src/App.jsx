@@ -75,10 +75,14 @@ export default function App() {
       case 'Enter':
         e.preventDefault();
         if (selectedIndex >= 0 && candidates[selectedIndex]) {
-          handleCandidatesSelect(candidates[selectedIndex]);
+          handleCandidateSelect(candidates[selectedIndex]);
         } else {
-          // 일반 폼 제출
-          handleSubmit(e);
+          const trimmedCity = city.trim();
+          if (trimmedCity.length >= MIN_CITY_LENGTH) {
+            setTarget(trimmedCity);
+            setCandidates([]);
+            setSelectedIndex(-1);
+          }
         }
         break;
 
@@ -286,21 +290,23 @@ export default function App() {
     container: { 
       fontFamily: "Arial, sans-serif",
       maxWidth: "720px",
-      margin: "0 4px",
+      margin: "0 3px",
       padding: "20px 4px !important",
-      paddingLeft: "4px !important",paddingRight: "4px !important",
+      paddingLeft: "4px !important",
+      paddingRight: "4px !important",
     },
     inputContainer: { 
       position: "relative",
       display: "flex",
       gap: "8px",
-      alignItems: "flex-start"
+      alignItems: "center"      
     },
 
     input: { 
       flex: 1,
       padding: "8px",
       fontsize: "14px !important",
+      border : "1px solid #b1c8ff",
     },
       // width: "100%", padding: "8px", fontSize: "14px" },
     button: { 
@@ -342,8 +348,8 @@ export default function App() {
       transition: "background-color 0.2s ease",
     },
     candidateButtonSelected: {
-      backgroundColor: "#b1c8ff",
-      borderColor: "#8a9eff",
+      backgroundColor: "#dfeef5",
+      borderColor: "#b1c8ff",
     },
     infoBox: {
       marginTop: "6px",
@@ -355,7 +361,7 @@ export default function App() {
     },
     errorText: { color: "crimson" },
     statusText: { 
-      margin: "2px 0",
+      margin: "4px 0",
       fontSize: "14px"
      }
   };
@@ -420,7 +426,7 @@ export default function App() {
 
       {/* 지오코딩 결과 */}
       <div style={{ marginTop: "6px" }}>
-        {loading && <p style={{ fontSize: "14px", margin: "4px 0" }}>위치 찾는 중...</p>}
+        {loading && <p style={{ fontSize: "14px", margin: "6px 0" }}>위치 찾는 중...</p>}
         {error && <p style={styles.errorText}>{error}</p>}
         {coords && !loading && (
           <div style={styles.infoBox}>
@@ -436,13 +442,13 @@ export default function App() {
 
       {/* 날씨 정보 */}
       <div style={{ marginTop: "4px" }}>
-        {weatherLoading && <p style={{ fontSize: "12px", margin: "6px 0"}}>날씨 불러오는 중...</p>}
+        {weatherLoading && <p style={{ fontSize: "14px", margin: "6px 0"}}>날씨 불러오는 중...</p>}
         {weatherError && <p style={styles.errorText}>{weatherError}</p>}
 
         {/* 현재 날씨 */}
         {currentWeather && !weatherLoading && !weatherError && (
           <div style={styles.infoBox}>
-            <h3 style={{ margin: "0 0 6px 0", fontSize: "14px" }}>현재 날씨</h3>
+            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>현재 날씨</h3>
             <p style={{ margin: "4px 0" }}>
               <strong>기온:</strong> {' '}
               {currentWeather.temp != null 
@@ -469,7 +475,7 @@ export default function App() {
         {/* 5일 예보 */}
         {dailyForecast.length > 0 && !weatherLoading && !weatherError && (
           <div style={styles.infoBox}>
-            <h3 style={{ margin: "0 0 6px 0", fontSize: "14px" }}>5일 예보</h3>
+            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>5일 예보</h3>
             <ul style={{ paddingLeft: "10px", margin: "0"  }}>
               {dailyForecast.map((day) => (
                 <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
