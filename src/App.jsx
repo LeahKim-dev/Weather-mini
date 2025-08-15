@@ -288,7 +288,7 @@ export default function App() {
   // 스타일 객체
   const styles = {
     container: { 
-      fontFamily: "Arial, sans-serif",
+      fontFamily: "나눔고딕, sans-serif",
       maxWidth: "720px",
       margin: "0 3px",
       padding: "20px 4px !important",
@@ -307,6 +307,7 @@ export default function App() {
       padding: "8px",
       fontsize: "14px !important",
       border : "1px solid #b1c8ff",
+      height: "30px",
     },
       // width: "100%", padding: "8px", fontSize: "14px" },
     button: { 
@@ -317,9 +318,10 @@ export default function App() {
       backgroundColor: "#f8f9fa",
       color: "rgba(73, 69, 69, 0.87)",
       border: "1px solid #b1c8ff",
-      borderRadius: "4px",
+      borderRadius: "12px",
       cursor: "pointer",
       fontSize: "14px",
+      height: "30px",
     },
     autocompleteContainer: {
       position: "absolute",
