@@ -306,7 +306,7 @@ export default function App() {
       flex: 1,
       padding: "8px",
       fontsize: "14px !important",
-      border : "1px solid #b1c8ff",
+      border : "2px solid #4462858a",
       height: "30px",
     },
       // width: "100%", padding: "8px", fontSize: "14px" },
@@ -317,7 +317,7 @@ export default function App() {
       padding: "4px 8px",
       backgroundColor: "#f8f9fa",
       color: "rgba(73, 69, 69, 0.87)",
-      border: "1px solid #b1c8ff",
+      border: "2px solid #4462858a",
       borderRadius: "12px",
       cursor: "pointer",
       fontSize: "14px",
@@ -329,7 +329,7 @@ export default function App() {
       right: 0,
       top: "100%",
       marginTop: "6px",
-      border: "1px solid #b1c8ff",
+      border: "2px solid #4462858a",
       borderRadius: "8px",
       padding: "6px",
       background: "#f8f9fa",
@@ -342,7 +342,7 @@ export default function App() {
       width: "100%",
       textAlign: "left",
       padding: "6px 8px",
-      border: "1px solid #b1c8ff",
+      border: "2px solid #4462858a",
       borderRadius: "6px",
       background: "transparent",
       cursor: "pointer",
@@ -351,13 +351,13 @@ export default function App() {
     },
     candidateButtonSelected: {
       backgroundColor: "#dfeef5",
-      borderColor: "#b1c8ff",
+      borderColor: "#4462858a",
     },
     infoBox: {
       marginTop: "6px",
       padding: "2px 14px",
       fontSize: "14px",
-      border: "1px solid #b1c8ff",
+      border: "2px solid #4462858a",
       borderRadius: "12px",
       backgroundColor: "#f8f9fa"
     },
@@ -365,13 +365,16 @@ export default function App() {
       marginTop: "6px",
       padding: "2px 14px",
       fontSize: "14px",
-      border: "1px solid #b1c8ff",
+      border: "2px solid #4462858a",
       borderRadius: "12px",
       backgroundColor: "#f8f9fa",
-      maxHeight: "200px", // 최대 높이 설정
-      overflowY: "auto"   // 세로 스크롤 활성화
+      maxHeight: "240px", // 최대 높이 설정
+      overflowY: "auto",   // 세로 스크롤 활성화
+
     },
-    errorText: { color: "crimson" },
+    errorText: { 
+      color: "crimson",
+      margin: "4px 0"},
     statusText: { 
       margin: "4px 0",
       fontSize: "14px"
@@ -380,10 +383,10 @@ export default function App() {
 
   return (
     <div style={styles.container}>
-      <h1 style={{ textAlign: "center" }}>날씨를 알아보자</h1>
+      <h1 style={{ textAlign: "center" }}>날씨날씨</h1>
 
       {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} style={{ marginTop: "8px"}}>
+      <form onSubmit={handleSubmit} style={{ marginTop: "14px"}}>
         <div style={styles.inputContainer}>
           <input
             style={styles.input}
