@@ -125,7 +125,7 @@ export default function App() {
     url.searchParams.set("latitude", coordinates.lat);
     url.searchParams.set("longitude", coordinates.lon);
     url.searchParams.set("timezone", "auto");
-    url.searchParams.set("forecast_days", "5");
+    url.searchParams.set("forecast_days", "14");
     url.searchParams.set(
       "current",
       "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
@@ -224,7 +224,7 @@ export default function App() {
             code: weatherData.current?.weather_code,
           });
 
-          // 5일 예보 설정
+          // 일기 예보 설정
           const forecast = (weatherData.daily?.time || []).map((date, index) => ({
             date,
             label: formatDate(date),
@@ -359,6 +359,16 @@ export default function App() {
       borderRadius: "12px",
       backgroundColor: "#f8f9fa"
     },
+    forecastBox: {
+      marginTop: "6px",
+      padding: "2px 14px",
+      fontSize: "14px",
+      border: "1px solid #b1c8ff",
+      borderRadius: "12px",
+      backgroundColor: "#f8f9fa",
+      maxHeight: "200px", // 최대 높이 설정
+      overflowY: "auto"   // 세로 스크롤 활성화
+    },
     errorText: { color: "crimson" },
     statusText: { 
       margin: "4px 0",
@@ -474,8 +484,8 @@ export default function App() {
 
         {/* 5일 예보 */}
         {dailyForecast.length > 0 && !weatherLoading && !weatherError && (
-          <div style={styles.infoBox}>
-            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>5일 예보</h3>
+          <div style={styles.forecastBox}>
+            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>일기 예보</h3>
             <ul style={{ paddingLeft: "10px", margin: "0"  }}>
               {dailyForecast.map((day) => (
                 <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
