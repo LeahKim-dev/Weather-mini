@@ -58,7 +58,12 @@ export default function App() {
   const [weatherError, setWeatherError] = useState("");
   const [currentWeather, setCurrentWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
-  
+  const [hourlyForecast, setHourlyForecast] = useState([]);
+  const [cityNow, setCityNow] = useState("");
+
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState("daily");
+
   // 자동완성 상태
   const [candidates, setCandidates] = useState([]);
   const [isManualSelection, setIsManualSelection] = useState(false);
@@ -155,6 +160,10 @@ export default function App() {
       "daily",
       "temperature_2m_max,temperature_2m_min,weather_code"
     );
+    url.searchParams.set(
+      "hourly",
+      "temperature_2m,weather_code,precipitation_probability"
+    );
 
     const response = await fetch(url.toString());
     if (!response.ok) throw new Error("예보 API 실패");
@@ -236,6 +245,15 @@ export default function App() {
         const weatherData = await fetchWeather(coords);
 
         if (!isCancelled) {
+          const tz = weatherData?.timezone || "UTC";
+          const dateLabel = new Intl.DateTimeFormat("ko-KR", {
+            timeZone: tz, month: "2-digit", day: "2-digit", weekday: "short"
+          }).format(new Date());
+          const timeLabel = new Intl.DateTimeFormat("ko-KR", {
+            timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
+          }).format(new Date());
+          setCityNow(`${dateLabel} ${timeLabel}`);
+          
           // 현재 날씨 설정
           setCurrentWeather({
             temp: weatherData.current?.temperature_2m,
@@ -253,9 +271,84 @@ export default function App() {
             tempMax: weatherData.daily?.temperature_2m_max?.[index],
             code: weatherData.daily?.weather_code?.[index],
           }));
-
           setDailyForecast(forecast);
+
+          // // 시간별 예보 설정
+          // const hourly = (weatherData.hourly?.time || []).slice(0,24).map((time, index) => ({
+          //   time,
+          //   hour: new Date(time).getHours(),
+          //   date: new Date(time).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit'}), 
+          //   temp: weatherData.hourly?.temperature_2m?.[index],
+          //   code: weatherData.hourly?.weather_code?.[index],
+          //   precipitation: weatherData.hourly?.precipitation_probability?.[index],
+          // }));
+
+          // 시간별 예보 설정 (도시 현지 시각 기준 현재시~24시간)
+          const times = weatherData.hourly?.time || [];
+          const temps = weatherData.hourly?.temperature_2m || [];
+          const codes = weatherData.hourly?.weather_code || [];
+          const pops  = weatherData.hourly?.precipitation_probability || [];
+
+          // 도시 타임존/오프셋
+          const offsetSec = weatherData?.utc_offset_seconds ?? 0;
+
+          // 도시 현지 "지금"의 연/월/일/시 추출
+          const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            hour12: false,
+          }).formatToParts(new Date());
+
+          const y = Number(parts.find(p => p.type === "year")?.value);
+          const m = Number(parts.find(p => p.type === "month")?.value);
+          const d = Number(parts.find(p => p.type === "day")?.value);
+          const h = Number(parts.find(p => p.type === "hour")?.value);
+
+          // 도시 현지 시각의 "정각"을 UTC epoch(ms)로
+          const cityHourStartUTC = Date.UTC(y, m - 1, d, h) - offsetSec * 1000;
+
+          // hourly.time(현지 문자열)을 UTC epoch(ms)로 변환하는 파서
+          const localISOToUTCms = (localIso) => {
+            // "YYYY-MM-DDTHH:MM" 가정
+            const [dateStr, timeStr] = localIso.split("T");
+            const [yy, mm, dd] = dateStr.split("-").map(Number);
+            const [HH] = timeStr.split(":").map(Number);
+            // 현지시간 → UTC epoch: UTC(yy,mm-1,dd,HH) - offset
+            return Date.UTC(yy, mm - 1, dd, HH) - offsetSec * 1000;
+          }
+
+          // 시작 인덱스 계산 + 경계 클램프
+          let startIndex = 0;
+          if (times.length > 0) {
+            const firstUTC = localISOToUTCms(times[0]);
+            startIndex = Math.floor((cityHourStartUTC - firstUTC) / 3600000);
+            if (startIndex < 0) startIndex = 0;
+            if (startIndex >= times.length) startIndex = Math.max(times.length - 24, 0);
+          }
+
+          const endIndex = Math.min(startIndex + 24, times.length);
+
+          // 슬라이스 후 맵핑 (표시는 문자열에서 바로 추출)
+          const hourly = times.slice(startIndex, endIndex).map((time, i) => {
+            const origIndex = startIndex + i;
+            const hour = Number(time.slice(11, 13));                   // "HH"
+            const dateMMDD = `${time.slice(5, 7)}/${time.slice(8, 10)}`; // "MM/DD"
+            return {
+              time,
+              hour,
+              date: dateMMDD,
+              temp: temps?.[origIndex],
+              code: codes?.[origIndex],
+              precipitation: pops?.[origIndex],
+            };
+          });
+
+          setHourlyForecast(hourly);
         }
+
       } catch (err) {
         if (!isCancelled) {
           setWeatherError(err.message || "예보를 불러오지 못했습니다.");
@@ -392,13 +485,45 @@ export default function App() {
       maxHeight: "260px", // 최대 높이 설정
       overflowY: "auto",   // 세로 스크롤 활성화
     },
+       // 탭 관련 스타일
+    tabContainer: {
+      marginTop: "6px",
+      border: "2px solid #4462858a",
+      borderRadius: "12px",
+      backgroundColor: "#f8f9fa",
+      overflow: "hidden"
+    },
+    tabButtons: {
+      display: "flex",
+      borderBottom: "2px solid #4462858a"
+    },
+    tabButton: {
+      flex: 1,
+      padding: "8px 12px",
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "bold",
+      transition: "background-color 0.2s ease, color 0.2s ease",
+      color: "#4462858a",
+    },
+    tabButtonActive: {
+      backgroundColor: "#dfeef5",
+      color: "#327dd4ff"
+    },
+    tabContent: {
+      padding: "2px 14px",
+      maxHeight: "280px",
+      overflowY: "auto"
+    },
     errorText: { 
       color: "crimson",
       margin: "4px 0"},
-    statusText: { 
-      margin: "4px 0",
-      fontSize: "14px"
-     }
+    // statusText: { 
+    //   margin: "4px 0",
+    //   fontSize: "14px"
+    //  }
   };
 
   return (
@@ -449,7 +574,7 @@ export default function App() {
         </div>
       </form>
 
-      {/* 상태 미리보기 */}
+      {/* 상태 미리보기
       <div style={{ marginTop: "6px" }}>
         <p style={styles.statusText}>
           입력 중: <strong>{city || "없음"}</strong>
@@ -457,7 +582,7 @@ export default function App() {
         <p style={styles.statusText}>
           조회 대상: <strong>{target || "미정"}</strong>
         </p>
-      </div>
+      </div> */}
 
       {/* 지오코딩 결과 */}
       <div style={{ marginTop: "6px" }}>
@@ -465,18 +590,17 @@ export default function App() {
         {error && <p style={styles.errorText}>{error}</p>}
         {coords && !loading && (
           <div style={styles.infoBox}>
-            <p style={{ margin: "4px 0" }}>
+            <p style={{ margin: "6px 0" }}>
               <strong>도시:</strong> {coords.label}
               {coords.country && `, ${coords.country}`}
             </p>
-            <p style={{ margin: "4px 0" }}><strong>위도:</strong> {coords.lat}</p>
-            <p style={{ margin: "4px 0" }}><strong>경도:</strong> {coords.lon}</p>
+            <p style={{ margin: "6px 0" }}><strong>현재 시각:</strong> {cityNow}</p>
           </div>
         )}
       </div>
 
       {/* 날씨 정보 */}
-      <div style={{ marginTop: "4px" }}>
+      <div style={{ marginTop: "6px" }}>
         {weatherLoading && <p style={{ fontSize: "14px", margin: "6px 0"}}>날씨 불러오는 중...</p>}
         {weatherError && <p style={styles.errorText}>{weatherError}</p>}
 
@@ -484,13 +608,13 @@ export default function App() {
         {currentWeather && !weatherLoading && !weatherError && (
           <div style={styles.infoBox}>
             <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>{getWeatherEmoji(currentWeather.code)} 현재 날씨</h3>
-            <p style={{ margin: "4px 0" }}>
+            <p style={{ margin: "6px 0" }}>
               <strong>기온:</strong> {' '}
               {currentWeather.temp != null 
                 ? `${Math.round(currentWeather.temp)}°C` 
                 : "-"}
             </p>
-            <p style={{ margin: "4px 0" }}>
+            <p style={{ margin: "6px 0" }}>
               <strong>체감:</strong> {' '}
               {currentWeather.feels != null 
                 ? `${Math.round(currentWeather.feels)}°C` 
@@ -507,19 +631,58 @@ export default function App() {
           </div>
         )}
 
-        {/* 5일 예보 */}
-        {dailyForecast.length > 0 && !weatherLoading && !weatherError && (
-          <div style={styles.forecastBox}>
-            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>일기 예보</h3>
-            <ul style={{ paddingLeft: "10px", margin: "0"  }}>
-              {dailyForecast.map((day) => (
-                <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
-                  {getWeatherEmoji(day.code)}
-                  <strong>{day.label}</strong> - {' '}
-                  {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
-                </li>
-              ))}
-            </ul>
+        {/* 탭으로 구성된 예보 정보 */}
+        {(dailyForecast.length > 0 || hourlyForecast.length > 0) && !weatherLoading && !weatherError && (
+          <div style={styles.tabContainer}>
+            {/* 탭 버튼들 */}
+            <div style={styles.tabButtons}>
+              <button
+                style={{
+                  ...styles.tabButton,
+                  ...(activeTab === "daily" ? styles.tabButtonActive : {})
+                }}
+                onClick={() => setActiveTab("daily")}
+              >
+                📅 일기 예보
+              </button>
+              <button
+                style={{
+                  ...styles.tabButton,
+                  ...(activeTab === "hourly" ? styles.tabButtonActive : {})
+                }}
+                onClick={() => setActiveTab("hourly")}
+              >
+                🕐 시간별 예보
+              </button>
+            </div>
+
+            {/* 탭 내용 */}
+            <div style={styles.tabContent}>
+              {activeTab === "daily" && dailyForecast.length > 0 && (
+                <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
+                  {dailyForecast.map((day) => (
+                    <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
+                      {getWeatherEmoji(day.code)} <strong>{day.label}</strong> - {' '}
+                      {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {activeTab === "hourly" && hourlyForecast.length > 0 && (
+                <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
+                  {hourlyForecast.map((hour, index) => (
+                    <li key={hour.time} style={{ marginBottom: "2px", fontSize: "14px"}}>
+                      {getWeatherEmoji(hour.code)} <strong>{hour.hour}시</strong> ({hour.date}) - {' '}
+                      {Math.round(hour.temp)}°C
+                      {hour.precipitation != null && hour.precipitation > 0 && (
+                        <span style={{ color: "#2563eb" }}> 🌧️ {hour.precipitation}%</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </div>
