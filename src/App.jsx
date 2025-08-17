@@ -8,6 +8,27 @@ const formatDate = (iso) => {
   return `${date.getMonth() + 1}/${date.getDate()}(${dayName})`;
 };
 
+const getWeatherEmoji = (weatherCode) => {
+  if (!weatherCode) return "🌫️";
+
+  const code = parseInt(weatherCode);
+
+  if (code === 0) return "☀️";
+  if (code === 1) return "🌤️";
+  if (code === 2) return "⛅";
+  if (code === 3) return "🌥️";
+  if (code >= 45 && code <= 48) return "🌫️";
+  if (code >= 51 && code <= 55) return "🌧️";
+  if (code >= 61 && code <= 65) return "🌦️";
+  if (code >= 66 && code <= 68) return "❄️";
+  if (code >= 71 && code <= 75) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌧️";
+  if (code >= 85 && code <= 86) return "🌨️";
+  if (code >= 95 && code <= 99) return "⛈️";
+
+  return "🌫️"; // 기본값
+}
+
 // API 관련 상수
 const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
@@ -368,9 +389,8 @@ export default function App() {
       border: "2px solid #4462858a",
       borderRadius: "12px",
       backgroundColor: "#f8f9fa",
-      maxHeight: "240px", // 최대 높이 설정
+      maxHeight: "260px", // 최대 높이 설정
       overflowY: "auto",   // 세로 스크롤 활성화
-
     },
     errorText: { 
       color: "crimson",
@@ -463,7 +483,7 @@ export default function App() {
         {/* 현재 날씨 */}
         {currentWeather && !weatherLoading && !weatherError && (
           <div style={styles.infoBox}>
-            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>현재 날씨</h3>
+            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>{getWeatherEmoji(currentWeather.code)} 현재 날씨</h3>
             <p style={{ margin: "4px 0" }}>
               <strong>기온:</strong> {' '}
               {currentWeather.temp != null 
@@ -494,6 +514,7 @@ export default function App() {
             <ul style={{ paddingLeft: "10px", margin: "0"  }}>
               {dailyForecast.map((day) => (
                 <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
+                  {getWeatherEmoji(day.code)}
                   <strong>{day.label}</strong> - {' '}
                   {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
                 </li>
