@@ -419,11 +419,11 @@ export default function App() {
     input: { 
       flex: 1,
       padding: "8px",
-      fontsize: "14px !important",
+      fontsize: "12px !important",
       border : "2px solid #4462858a",
       height: "30px",
     },
-      // width: "100%", padding: "8px", fontSize: "14px" },
+      // width: "100%", padding: "8px", fontSize: "12px" },
     button: { 
       // marginTop: "6px", 
       whiteSpace: "nowrap",
@@ -434,7 +434,7 @@ export default function App() {
       border: "2px solid #4462858a",
       borderRadius: "12px",
       cursor: "pointer",
-      fontSize: "14px",
+      fontSize: "12px",
       height: "30px",
     },
     autocompleteContainer: {
@@ -442,7 +442,7 @@ export default function App() {
       left: 0,
       right: 0,
       top: "100%",
-      marginTop: "6px",
+      marginTop: "4px",
       border: "2px solid #4462858a",
       borderRadius: "8px",
       padding: "6px",
@@ -460,7 +460,7 @@ export default function App() {
       borderRadius: "6px",
       background: "transparent",
       cursor: "pointer",
-      marginBottom: "6px",
+      marginBottom: "4px",
       transition: "background-color 0.2s ease",
     },
     candidateButtonSelected: {
@@ -468,26 +468,26 @@ export default function App() {
       borderColor: "#4462858a",
     },
     infoBox: {
-      marginTop: "6px",
-      padding: "2px 14px",
-      fontSize: "14px",
+      marginTop: "4px",
+      padding: "2px 12px",
+      fontSize: "12px",
       border: "2px solid #4462858a",
       borderRadius: "12px",
       backgroundColor: "#f8f9fa"
     },
-    forecastBox: {
-      marginTop: "6px",
-      padding: "2px 14px",
-      fontSize: "14px",
-      border: "2px solid #4462858a",
-      borderRadius: "12px",
-      backgroundColor: "#f8f9fa",
-      maxHeight: "260px", // 최대 높이 설정
-      overflowY: "auto",   // 세로 스크롤 활성화
-    },
+    // forecastBox: {
+    //   marginTop: "6px",
+    //   padding: "2px 12px",
+    //   fontSize: "12px",
+    //   border: "2px solid #4462858a",
+    //   borderRadius: "12px",
+    //   backgroundColor: "#f8f9fa",
+    //   maxHeight: "280px", // 최대 높이 설정
+    //   overflowY: "auto",   // 세로 스크롤 활성화
+    // },
        // 탭 관련 스타일
     tabContainer: {
-      marginTop: "6px",
+      marginTop: "4px",
       border: "2px solid #4462858a",
       borderRadius: "12px",
       backgroundColor: "#f8f9fa",
@@ -503,18 +503,18 @@ export default function App() {
       border: "none",
       background: "transparent",
       cursor: "pointer",
-      fontSize: "14px",
+      fontSize: "12px",
       fontWeight: "bold",
       transition: "background-color 0.2s ease, color 0.2s ease",
       color: "#4462858a",
     },
     tabButtonActive: {
       backgroundColor: "#dfeef5",
-      color: "#327dd4ff"
+      color: "#327dd4ff",
     },
     tabContent: {
-      padding: "2px 14px",
-      maxHeight: "280px",
+      padding: "2px 12px",
+      maxHeight: "360px",
       overflowY: "auto"
     },
     errorText: { 
@@ -522,7 +522,7 @@ export default function App() {
       margin: "4px 0"},
     // statusText: { 
     //   margin: "4px 0",
-    //   fontSize: "14px"
+    //   fontSize: "12px"
     //  }
   };
 
@@ -531,7 +531,7 @@ export default function App() {
       <h1 style={{ textAlign: "center" }}>날씨날씨</h1>
 
       {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} style={{ marginTop: "14px"}}>
+      <form onSubmit={handleSubmit} style={{ marginTop: "16px"}}>
         <div style={styles.inputContainer}>
           <input
             style={styles.input}
@@ -585,36 +585,36 @@ export default function App() {
       </div> */}
 
       {/* 지오코딩 결과 */}
-      <div style={{ marginTop: "6px" }}>
-        {loading && <p style={{ fontSize: "14px", margin: "6px 0" }}>위치 찾는 중...</p>}
+      <div style={{ marginTop: "4px" }}>
+        {loading && <p style={{ fontSize: "12px", margin: "4px 0" }}>위치 찾는 중...</p>}
         {error && <p style={styles.errorText}>{error}</p>}
         {coords && !loading && (
           <div style={styles.infoBox}>
-            <p style={{ margin: "6px 0" }}>
+            <p style={{ margin: "4px 0" }}>
               <strong>도시:</strong> {coords.label}
               {coords.country && `, ${coords.country}`}
             </p>
-            <p style={{ margin: "6px 0" }}><strong>현재 시각:</strong> {cityNow}</p>
+            <p style={{ margin: "4px 0" }}><strong> 현재 시각:</strong> {cityNow}</p>
           </div>
         )}
       </div>
 
       {/* 날씨 정보 */}
-      <div style={{ marginTop: "6px" }}>
-        {weatherLoading && <p style={{ fontSize: "14px", margin: "6px 0"}}>날씨 불러오는 중...</p>}
+      <div style={{ marginTop: "4px" }}>
+        {weatherLoading && <p style={{ fontSize: "12px", margin: "4px 0"}}>날씨 불러오는 중...</p>}
         {weatherError && <p style={styles.errorText}>{weatherError}</p>}
 
         {/* 현재 날씨 */}
         {currentWeather && !weatherLoading && !weatherError && (
           <div style={styles.infoBox}>
-            <h3 style={{ margin: "6px 0 6px 0", fontSize: "14px" }}>{getWeatherEmoji(currentWeather.code)} 현재 날씨</h3>
-            <p style={{ margin: "6px 0" }}>
+            <h3 style={{ margin: "4px 0 4px 0", fontSize: "12px" }}>{getWeatherEmoji(currentWeather.code)} 현재 날씨</h3>
+            <p style={{ margin: "4px 0" }}>
               <strong>기온:</strong> {' '}
               {currentWeather.temp != null 
                 ? `${Math.round(currentWeather.temp)}°C` 
                 : "-"}
             </p>
-            <p style={{ margin: "6px 0" }}>
+            <p style={{ margin: "4px 0" }}>
               <strong>체감:</strong> {' '}
               {currentWeather.feels != null 
                 ? `${Math.round(currentWeather.feels)}°C` 
@@ -661,7 +661,7 @@ export default function App() {
               {activeTab === "daily" && dailyForecast.length > 0 && (
                 <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
                   {dailyForecast.map((day) => (
-                    <li key={day.date} style={{ marginBottom: "2px", fontSize: "14px"}}>
+                    <li key={day.date} style={{ marginBottom: "2px", fontSize: "12px"}}>
                       {getWeatherEmoji(day.code)} <strong>{day.label}</strong> - {' '}
                       {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
                     </li>
@@ -672,7 +672,7 @@ export default function App() {
               {activeTab === "hourly" && hourlyForecast.length > 0 && (
                 <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
                   {hourlyForecast.map((hour, index) => (
-                    <li key={hour.time} style={{ marginBottom: "2px", fontSize: "14px"}}>
+                    <li key={hour.time} style={{ marginBottom: "2px", fontSize: "12px"}}>
                       {getWeatherEmoji(hour.code)} <strong>{hour.hour}시</strong> ({hour.date}) - {' '}
                       {Math.round(hour.temp)}°C
                       {hour.precipitation != null && hour.precipitation > 0 && (

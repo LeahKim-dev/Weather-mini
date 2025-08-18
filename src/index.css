@@ -25,15 +25,15 @@ body {
 
   /* 타이포그래피 크기 */
   --fs-body: 12px;
-  --fs-small: clamp(12px, 3vw, 14px);
-  --fs-h1: 34px;
+  --fs-small: clamp(12px, 3vw, 12px);
+  --fs-h1: 32px;
 
   /* 레이아웃 변수 */
   --radius: 12px;
   --container-max: 720px;
-  --space-1: 8px;
+  --space-1: 6px;
   --space-2: 12px;
-  --space-3: 16px;
+  --space-3: 6px;
 
   /* 색상 변수 */
   --color-primary: #e43900;
@@ -75,7 +75,7 @@ html {
 h1 {
   font-size: var(--fs-h1);
   line-height: 1.2;
-  margin: var(--space-3) 0 var(--space-2);
+  margin: 0px 0 0;
 }
 
 p,
@@ -107,7 +107,7 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
-  padding: 25px !important;
+  padding: 30px !important;
   margin: 0 !important;
 }
 
@@ -123,7 +123,7 @@ body {
   input,
   select,
   textarea {
-    font-size: 14px; /* iOS 줌 방지 */
+    font-size: 12px; /* iOS 줌 방지 */
   }
   
   .app-wrap {
