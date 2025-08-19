@@ -29,9 +29,27 @@ const getWeatherEmoji = (weatherCode) => {
   return "🌫️"; // 기본값
 }
 
+const getUVLevel = (uvIndex) => {
+  if (!uvIndex) return { level: "알 수 없음", color: "#666", emoji: "❓" };
+  if (uvIndex < 3) return { level: "낮음", color: "#00c851", emoji: "😊"};
+  if (uvIndex < 6) return { level: "보통", color: "#ffbb33", emoji: "😐" };
+  if (uvIndex < 8) return { level: "높음", color: "#ff6b6b", emoji: "😰" };
+  if (uvIndex < 11) return { level: "매우 높음", color: "#cc0000", emoji: "🥵" };
+  return { level: "위험", color: "#000000", emoji: "💀" };
+};
+
+const getAQILevel = (aqi) => {
+  if (!aqi) return { level: "알 수 없음", color: "#666", emoji: "❓" };
+  if (aqi <= 50) return { level: "좋음", color: "#00c851", emoji: "😊" };
+  if (aqi <= 100) return { level: "보통", color: "#ffbb33", emoji: "😐"};
+  if (aqi <= 150) return { level: "나쁨", color: "#ff6b6b", emoji: "😷" };
+  if (aqi <= 200) return { level: "매우 나쁨", color: "#cc0000", emoji: "🤢" };
+  return { level: "위험", color: "#000000", emoji: "💀" };
+}
 // API 관련 상수
 const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
+const AIR_QUALITY_API_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
 const MIN_CITY_LENGTH = 3;
 const AUTOCOMPLETE_DELAY = 300;
 
@@ -60,6 +78,7 @@ export default function App() {
   const [dailyForecast, setDailyForecast] = useState([]);
   const [hourlyForecast, setHourlyForecast] = useState([]);
   const [cityNow, setCityNow] = useState("");
+  const [airQuality, setAirQuality] = useState(null);
 
   // 탭 상태
   const [activeTab, setActiveTab] = useState("daily");
@@ -154,7 +173,7 @@ export default function App() {
     url.searchParams.set("forecast_days", "14");
     url.searchParams.set(
       "current",
-      "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
+      "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,uv_index"
     );
     url.searchParams.set(
       "daily",
@@ -171,6 +190,19 @@ export default function App() {
     return response.json();
   };
 
+  // 대기질 API 호출
+  const fetchAirQuality = async (coordinates) => {
+    const url = new URL(AIR_QUALITY_API_URL);
+    url.searchParams.set("latitude", coordinates.lat);
+    url.searchParams.set("longitude", coordinates.lon);
+    // url.searchParams.set("timezone", "auto");
+    url.searchParams.set("current", "us_aqi,pm10,pm2_5");
+
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error("대기질 API 실패");
+    
+    return response.json();
+  };
   // 지오코딩 효과
   useEffect(() => {
     if (!target) return;
@@ -240,9 +272,14 @@ export default function App() {
       setWeatherError("");
       setCurrentWeather(null);
       setDailyForecast([]);
+      setHourlyForecast([]);
+      setAirQuality(null);
 
       try {
-        const weatherData = await fetchWeather(coords);
+        const [weatherData, airQualityData] = await Promise.all([
+          fetchWeather(coords),
+          fetchAirQuality(coords).catch(() => null) // 대기질 API는 선택적
+        ]);
 
         if (!isCancelled) {
           const tz = weatherData?.timezone || "UTC";
@@ -261,6 +298,7 @@ export default function App() {
             humidity: weatherData.current?.relative_humidity_2m,
             wind: weatherData.current?.wind_speed_10m,
             code: weatherData.current?.weather_code,
+            uvIndex: weatherData.current?.uv_index,
           });
 
           // 일기 예보 설정
@@ -347,6 +385,14 @@ export default function App() {
           });
 
           setHourlyForecast(hourly);
+
+          if (airQualityData?.current) {
+            setAirQuality({
+              aqi: airQualityData.current.us_aqi,
+              pm10: airQualityData.current.pm10,
+              pm25: airQualityData.current.pm2_5,
+            })
+          }
         }
 
       } catch (err) {
@@ -415,7 +461,6 @@ export default function App() {
       gap: "8px",
       alignItems: "center"      
     },
-
     input: { 
       flex: 1,
       padding: "8px",
@@ -485,7 +530,7 @@ export default function App() {
     //   maxHeight: "280px", // 최대 높이 설정
     //   overflowY: "auto",   // 세로 스크롤 활성화
     // },
-       // 탭 관련 스타일
+    // 탭 관련 스타일
     tabContainer: {
       marginTop: "4px",
       border: "2px solid #4462858a",
@@ -628,8 +673,47 @@ export default function App() {
                 ? `${currentWeather.wind} m/s` 
                 : "-"}
             </p>
+            {/* 자외선 지수 */}
+            {currentWeather.uvIndex != null && (
+              <p style={{ margin: "4px 0"}}>
+                <strong>자외선:</strong> {' '}
+                {(() => {
+                  const uv = getUVLevel(currentWeather.uvIndex);
+                  return (
+                    <span style={{ color: uv.color }}>
+                      {uv.emoji} {Math.round(currentWeather.uvIndex)} ({uv.level})
+                    </span>
+                  );
+                })()}
+              </p>
+            )}
           </div>
         )}
+
+        {/* 대기질 정보 */}
+        {airQuality && !weatherLoading && !weatherError && (
+          <div style={styles.infoBox}>
+            <h3 style={{ margin: "4px 0 4px 0", fontSize: "12px" }}>🌬️ 대기질</h3>
+            <p style={{ margin: "4px 0" }}>
+              <strong>종합지수:</strong> {' '}
+              {(() => {
+                const aqi = getAQILevel(airQuality.aqi);
+                return (
+                  <span style={{ color: aqi.color }}>
+                    {aqi.emoji} {Math.round(airQuality.aqi)} ({aqi.level})
+                  </span>
+                )
+              })()}
+            </p>
+            <p style={{ margin: "4px 0" }}>
+              <strong>미세먼지:</strong> {' '}
+              {airQuality.pm10 != null ? `${Math.round(airQuality.pm10)} μg/m³` : "-"} {' '}
+              | <strong>초미세먼지:</strong> {' '}
+              {airQuality.pm25 != null ? `${Math.round(airQuality.pm25)} μg/m³` : "-"}
+            </p>
+          </div>
+        )}            
+
 
         {/* 탭으로 구성된 예보 정보 */}
         {(dailyForecast.length > 0 || hourlyForecast.length > 0) && !weatherLoading && !weatherError && (
