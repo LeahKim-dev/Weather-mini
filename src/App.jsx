@@ -181,7 +181,7 @@ export default function App() {
     );
     url.searchParams.set(
       "hourly",
-      "temperature_2m,weather_code,precipitation_probability"
+      "temperature_2m,weather_code,precipitation_probability,uv_index"
     );
 
     const response = await fetch(url.toString());
@@ -326,7 +326,7 @@ export default function App() {
           const temps = weatherData.hourly?.temperature_2m || [];
           const codes = weatherData.hourly?.weather_code || [];
           const pops  = weatherData.hourly?.precipitation_probability || [];
-
+          const uvIndexes = weatherData.hourly?.uv_index || [];
           // 도시 타임존/오프셋
           const offsetSec = weatherData?.utc_offset_seconds ?? 0;
 
@@ -381,6 +381,7 @@ export default function App() {
               temp: temps?.[origIndex],
               code: codes?.[origIndex],
               precipitation: pops?.[origIndex],
+              uvIndex: uvIndexes?.[origIndex],
             };
           });
 
@@ -757,11 +758,29 @@ export default function App() {
                 <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
                   {hourlyForecast.map((hour, index) => (
                     <li key={hour.time} style={{ marginBottom: "2px", fontSize: "12px"}}>
-                      {getWeatherEmoji(hour.code)} <strong>{hour.hour}시</strong> ({hour.date}) - {' '}
-                      {Math.round(hour.temp)}°C
-                      {hour.precipitation != null && hour.precipitation > 0 && (
-                        <span style={{ color: "#2563eb" }}> 🌧️ {hour.precipitation}%</span>
-                      )}
+                      <div style={{display:"flex", alignItems:"center", gap:"4px",flexWrap:"wrap"}}>
+                        <span>
+                          {getWeatherEmoji(hour.code)} <strong>{hour.hour}시</strong> ({hour.date}) - {' '}
+                          {Math.round(hour.temp)}°C
+                        </span>
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                          {hour.precipitation != null && hour.precipitation > 0 && (
+                            <span style={{ color: "#2563eb", fontSize: "11px" }}>🌧️ {hour.precipitation}%</span>
+                          )}
+                          {hour.uvIndex != null && hour.uvIndex > 0 && (  // 이 부분이 새로 추가됨
+                            <span style={{ fontSize: "11px" }}>
+                              {(() => {
+                                const uv = getUVLevel(hour.uvIndex);
+                                return (
+                                  <span style={{ color: uv.color }}>
+                                    ☀️ {Math.round(hour.uvIndex)} ({uv.level})
+                                  </span>
+                                );
+                              })()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>
