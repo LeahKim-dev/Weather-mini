@@ -8,6 +8,126 @@ const formatDate = (iso) => {
   return `${date.getMonth() + 1}/${date.getDate()}(${dayName})`;
 };
 
+const getWeatherTheme = (weatherCode) => {
+  if (!weatherCode) {
+    return {
+      background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 10%)",
+      containerBg: "rgba(255, 255, 255, 0.9)",
+      borderColor: "4462858a",
+      textColor: "#333"
+    };
+  }
+
+  const code = parseInt(weatherCode);
+  // 맑음
+  if (code === 0) {
+    return {
+      background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+      containerBg: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#ff9ab80",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 약간 흐림
+  if (code === 1) {
+    return {
+      background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+      containerBg: "rgba(255, 255, 255, 0.9)",
+      borderColor: "#a8edea80",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 흐림
+  if (code === 2 || code ===3) {
+    return {
+      background: "linear-gradient(135deg, #d3d3d3 0%, #c0c0c0 100%)",
+      containerBg: "rgba(255, 255, 255, 0.85)",
+      borderColor: "#999",
+      textColor: "#333"
+    };
+  }
+
+  // 안개
+  if (code >= 45 && code <= 48) {
+    return {
+      background: "linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)",
+      containerBg: "rgba(255, 255, 255, 0.8",
+      borderColor: "#7fbc8d",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 이슬비/가벼운 비
+  if (code >= 51 && code <= 55) {
+    return {
+      background: "linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)",
+      containerBg: "rgba(255, 255, 255, 0.9)",
+      borderColor: "#74b9ff80",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 비
+  if (code >= 61 && code <= 65) {
+    return {
+      background: "linear-gradient(135deg, #636fa4 0%, #e8cbc0 100%)",
+      containerBg: "rgba(255, 255, 255, 0.9)",
+      borderColor: "#636fa480",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 진눈깨비
+  if (code >= 66 && code <= 68) {
+    return {
+      background: "linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%)",
+      containerBg: "rgba(255, 255, 255, 0.95)",
+      borderColor: " #8e9eab80",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 눈
+  if (code >= 71 && code <= 75) {
+    return {
+      background: "linear-gradient(135deg, #e6f3ff 0%, #b3d9ff 100%)",
+      containerBg: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#b3d9ff80",
+      textColor: "#2c3e50"
+    };
+  }
+
+  // 소나기
+  if (code >= 80 && code <= 82) {
+    return {
+      background: "linear-gradient(135deg, #667db6 0%, #0082c8 100%)",
+      containerBg: "rgba(255, 255, 255, 0.9)",
+      borderColor: "#667db680",
+      textColor: "#fff"
+    };
+  }
+
+  // 뇌우
+  if (code >= 95 && code <= 99) {
+    return {
+      background: "linear-gradient(135deg, #434343 0%, #000000 100%)",
+      containerBg: " rgba(255, 255, 255, 0.95)",
+      borderColor: "#666",
+      textColor: "#333"
+    };
+  }
+
+  // 기본값
+  return {
+    background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+    containerBg: "rgba(255, 255, 255, 0.9)",
+    borderColor: "#4462858a",
+    textColor: "#333"
+  };
+};
+
 const getWeatherEmoji = (weatherCode) => {
   if (!weatherCode) return "🌫️";
 
@@ -71,6 +191,11 @@ export default function App() {
   const [error, setError] = useState("");
   const [coords, setCoords] = useState(null);
   
+  // 즐겨찾기/최근 검색 상태
+  const [favorites, setFavorites] = useState([]);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
   // 날씨 상태
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState("");
@@ -88,6 +213,35 @@ export default function App() {
   const [isManualSelection, setIsManualSelection] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
+  // 즐겨찾기 추가/제거
+  const toggleFavorite = (location) => {
+    const key = `${location.label}-${location.lat}-${location.lon}`;
+    const exists = favorites.some(fav => `${fav.label}-${fav.lat}-${fav.lon}` === key);
+    
+    if (exists) {
+      const newFavorites = favorites.filter(fav => `${fav.label}-${fav.lat}-${fav.lon}` !== key);
+      setFavorites(newFavorites);
+    } else {
+      const newFavorites = [...favorites, location].slice(0, 5); // 최대 5개
+      setFavorites(newFavorites);
+    }
+  };
+
+  // 즐겨찾기 여부 확인
+  const isFavorite = (location) => {
+    if (!location) return false;
+    const key = `${location.label}-${location.lat}-${location.lon}`;
+    return favorites.some(fav => `${fav.label}-${fav.lat}-${fav.lon}` === key);
+  };
+
+  // 최근 검색에 추가
+  const addToRecentSearches = (location) => {
+    const key = `${location.label}-${location.lat}-${location.lon}`;
+    const filtered = recentSearches.filter(recent => `${recent.label}-${recent.lat}-${recent.lon}` !== key);
+    const newRecentSearches = [location, ...filtered].slice(0, 10); // 최대 10개
+    setRecentSearches(newRecentSearches);
+  };
+
   // 후보 선택 핸들러
   const handleCandidateSelect = (candidate) => {
     setError("");
@@ -96,6 +250,18 @@ export default function App() {
     setTarget(candidate.label);
     setCandidates([]);
     setSelectedIndex(-1);
+    addToRecentSearches(candidate);
+  };
+
+  // 즐겨찾기/최근검색에서 선택
+  const handleHistorySelect = (location) => {
+    setError("");
+    setIsManualSelection(true);
+    setCoords(location);
+    setTarget(location.label);
+    setCity(location.label);
+    setShowHistory(false);
+    addToRecentSearches(location);
   };
 
   // 키보드 네비게이션 핸들러
@@ -311,22 +477,13 @@ export default function App() {
           }));
           setDailyForecast(forecast);
 
-          // // 시간별 예보 설정
-          // const hourly = (weatherData.hourly?.time || []).slice(0,24).map((time, index) => ({
-          //   time,
-          //   hour: new Date(time).getHours(),
-          //   date: new Date(time).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit'}), 
-          //   temp: weatherData.hourly?.temperature_2m?.[index],
-          //   code: weatherData.hourly?.weather_code?.[index],
-          //   precipitation: weatherData.hourly?.precipitation_probability?.[index],
-          // }));
-
           // 시간별 예보 설정 (도시 현지 시각 기준 현재시~24시간)
           const times = weatherData.hourly?.time || [];
           const temps = weatherData.hourly?.temperature_2m || [];
           const codes = weatherData.hourly?.weather_code || [];
           const pops  = weatherData.hourly?.precipitation_probability || [];
           const uvIndexes = weatherData.hourly?.uv_index || [];
+
           // 도시 타임존/오프셋
           const offsetSec = weatherData?.utc_offset_seconds ?? 0;
 
@@ -446,6 +603,41 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [city]);
 
+  
+  // 로딩 스켈레톤 컴포넌트
+  const LoadingSkeleton = ({ lines = 3 }) => (
+    <div style={{
+      padding: "2px 12px",
+      border: `2px solid ${currentTheme.borderColor}`,
+      borderRadius: "12px",
+      backgroundColor: currentTheme.containerBg,
+      marginTop: "4px",
+      backdropFilter: "blur(10px)"
+    }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div key={i} style={{
+          height: "16px",
+          backgroundColor: "#e2e8f0",
+          borderRadius: "4px",
+          margin: "8px 0",
+          animation: "pulse 1.5s ease-in-out infinite",
+          width: i === 0 ? "60%" : i === lines - 1 ? "40%" : "80%"
+        }} />
+      ))}
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+          }
+        `}
+      </style>
+    </div>
+  );
+
+  // 현재 날씨 테마 계산
+  const currentTheme = currentWeather ? getWeatherTheme(currentWeather.code) : getWeatherTheme(null);
+
   // 스타일 객체
   const styles = {
     container: { 
@@ -455,7 +647,19 @@ export default function App() {
       padding: "20px 4px !important",
       paddingLeft: "4px !important",
       paddingRight: "4px !important",
+      color: currentTheme.textColor,
+      transition: "all 0.5s ease"
     },
+    backgroundContainer: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: currentTheme.background,
+      zIndex: -1,
+      transition: "background 0.5s ease"
+    },    
     inputContainer: { 
       position: "relative",
       display: "flex",
@@ -466,8 +670,12 @@ export default function App() {
       flex: 1,
       padding: "8px",
       fontsize: "12px !important",
-      border : "2px solid #4462858a",
+      border : `2px solid ${currentTheme.borderColor}`,
       height: "30px",
+      backgroundColor: currentTheme.containerBg,
+      color: currentTheme.textColor,
+      transition: "all 0.3s ease",
+      outline: "none"
     },
       // width: "100%", padding: "8px", fontSize: "12px" },
     button: { 
@@ -475,34 +683,38 @@ export default function App() {
       whiteSpace: "nowrap",
       flexShrink: 0,
       padding: "4px 8px",
-      backgroundColor: "#f8f9fa",
-      color: "rgba(73, 69, 69, 0.87)",
-      border: "2px solid #4462858a",
+      backgroundColor: currentTheme.containerBg,
+      color: currentTheme.textColor,
+      border: `2px solid ${currentTheme.borderColor}`,
       borderRadius: "12px",
       cursor: "pointer",
       fontSize: "12px",
       height: "30px",
+      transition: "all 0.2s ease"
     },
+
     autocompleteContainer: {
       position: "absolute",
       left: 0,
       right: 0,
       top: "100%",
       marginTop: "4px",
-      border: "2px solid #4462858a",
+      border: `2px solid ${currentTheme.borderColor}`,
       borderRadius: "8px",
       padding: "6px",
-      background: "#f8f9fa",
+      backgroundColor: currentTheme.containerBg,
+      backdropFilter: "blur(10px)",
       maxHeight: "40vh",
       overflowY: "auto",
-      zIndex: 10,
+      zIndex: 10,     
+      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
     },
     candidateButton: {
       display: "block",
       width: "100%",
       textAlign: "left",
       padding: "6px 8px",
-      border: "2px solid #4462858a",
+      border: "none",
       borderRadius: "6px",
       background: "transparent",
       cursor: "pointer",
@@ -510,38 +722,32 @@ export default function App() {
       transition: "background-color 0.2s ease",
     },
     candidateButtonSelected: {
-      backgroundColor: "#dfeef5",
-      borderColor: "#4462858a",
+      
+      backgroundColor: "rgba(70, 98, 133, 0.2)",
     },
     infoBox: {
       marginTop: "4px",
-      padding: "2px 12px",
+      padding: "4px",
       fontSize: "12px",
-      border: "2px solid #4462858a",
+      border: `2px solid ${currentTheme.borderColor}`,
       borderRadius: "12px",
-      backgroundColor: "#f8f9fa"
+      backgroundColor: currentTheme.containerBg,
+      backdropFilter: "blur(10px)",
+      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
     },
-    // forecastBox: {
-    //   marginTop: "6px",
-    //   padding: "2px 12px",
-    //   fontSize: "12px",
-    //   border: "2px solid #4462858a",
-    //   borderRadius: "12px",
-    //   backgroundColor: "#f8f9fa",
-    //   maxHeight: "280px", // 최대 높이 설정
-    //   overflowY: "auto",   // 세로 스크롤 활성화
-    // },
     // 탭 관련 스타일
     tabContainer: {
       marginTop: "4px",
-      border: "2px solid #4462858a",
+      border: `2px solid ${currentTheme.borderColor}`,
       borderRadius: "12px",
-      backgroundColor: "#f8f9fa",
-      overflow: "hidden"
+      backgroundColor: currentTheme.containerBg,
+      backdropFilter: "blur(10px)",
+      overflow: "hidden",
+      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
     },
     tabButtons: {
       display: "flex",
-      borderBottom: "2px solid #4462858a"
+      borderBottom: `2px solid ${currentTheme.borderColor}`
     },
     tabButton: {
       flex: 1,
@@ -552,7 +758,7 @@ export default function App() {
       fontSize: "12px",
       fontWeight: "bold",
       transition: "background-color 0.2s ease, color 0.2s ease",
-      color: "#4462858a",
+      color: currentTheme.textColor,
     },
     tabButtonActive: {
       backgroundColor: "#dfeef5",
@@ -566,229 +772,310 @@ export default function App() {
     errorText: { 
       color: "crimson",
       margin: "4px 0"},
-    // statusText: { 
-    //   margin: "4px 0",
-    //   fontSize: "12px"
-    //  }
+    loadingText: {
+      margin: "8px 0",
+      fontSize: "14px",
+      color: currentTheme.textColor,
+      opacity: 0.7
+    }
   };
 
-  return (
-    <div style={styles.container}>
-      <h1 style={{ textAlign: "center" }}>날씨날씨</h1>
+ return (
+    <>
+      <div style={styles.backgroundContainer} />
+      <div style={styles.container}>
+        <h1 style={{ textAlign: "center", marginBottom: "16px", fontSize: "28px" }}>🌤️날씨날씨</h1>
 
-      {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} style={{ marginTop: "16px"}}>
-        <div style={styles.inputContainer}>
-          <input
-            style={styles.input}
-            placeholder="도시명을 입력 (예: Seoul, Tokyo, Paris)"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <button type="submit" style={styles.button}>
-            조회
-          </button>
+        {/* 입력 폼 */}
+        <form onSubmit={handleSubmit} style={{ marginTop: "16px"}}>
+          <div style={styles.inputContainer}>
+            <input
+              style={styles.input}
+              placeholder="도시명을 입력하세요 (예: Seoul, Tokyo, Paris)"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <button type="submit" style={styles.button}>
+              🔍 조회
+            </button>
 
+            {/* 자동완성 목록 */}
+            {candidates.length > 0 && (
+              <div style={styles.autocompleteContainer}>
+                {candidates.map((candidate, index) => (
+                  <button
+                    key={`${candidate.label}-${candidate.lat}-${candidate.lon}`}
+                    style={{
+                      ...styles.candidateButton,
+                      ...(index === selectedIndex ? styles.candidateButtonSelected : {})
+                    }}
+                    onClick={() => handleCandidateSelect(candidate)}
+                    type="button"
+                  >
+                    <div style={{fontWeight: "bold", marginBottom: "2px"}}>
+                      {candidate.label}
+                      {candidate.country && <span style={{ color: "#666", fontWeight: "normal" }}>, {candidate.country}</span>}
+                      {candidate.code && <span style={{ color: "#666", fontWeight: "normal" }}> ({candidate.code})</span>}
+                    </div>
+                    {candidate.detail && (
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        {candidate.detail}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </form>
 
-          {/* 자동완성 목록 */}
-          {candidates.length > 0 && (
-            <div style={styles.autocompleteContainer}>
-              {candidates.map((candidate, index) => (
-                <button
-                  key={`${candidate.label}-${candidate.lat}-${candidate.lon}`}
-                  style={{
-                    ...styles.candidateButton,
-                    ...(index === selectedIndex ? styles.candidateButtonSelected : {})
-                  }}
-                  onClick={() => handleCandidateSelect(candidate)}
-                  type="button"
-                >
-                  <strong>{candidate.label && <span style={{ color: "#727272" }}>{candidate.label}</span>}</strong>
-                  
-                  {candidate.country && <span style={{ color: "#727272" }}>, {candidate.country}</span>}
-                  
-                  {candidate.code && <span style={{ color: "#727272" }}> ({candidate.code})</span>}
-                  
-                  {candidate.detail && (
-                    <span style={{ color: "#727272" }}> — {candidate.detail}</span>
-                  )}
-                </button>
-              ))}
+        {/* 지오코딩 결과 */}
+        <div>
+          {loading && <p style={styles.loadingText}>📍 위치 찾는 중...</p>}
+          {error && <p style={styles.errorText}>{error}</p>}
+          {coords && !loading && (
+            <div style={styles.infoBox}>
+              <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+                <div>
+                  <p style={{ margin: "4px 0 4px 0", fontSize: "12px", fontWeight: "bold" }}>
+                    📍 {coords.label}
+                    {coords.country && `, ${coords.country}`} {"  |  "}{cityNow}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </form>
 
-      {/* 상태 미리보기
-      <div style={{ marginTop: "6px" }}>
-        <p style={styles.statusText}>
-          입력 중: <strong>{city || "없음"}</strong>
-        </p>
-        <p style={styles.statusText}>
-          조회 대상: <strong>{target || "미정"}</strong>
-        </p>
-      </div> */}
+        {/* 날씨 정보 */}
+        <div>
+          {weatherLoading && <p style={styles.loadingText}>🌤️ 날씨 불러오는 중...</p>}
+          {weatherError && <p style={styles.errorText}>{weatherError}</p>}
 
-      {/* 지오코딩 결과 */}
-      <div style={{ marginTop: "4px" }}>
-        {loading && <p style={{ fontSize: "12px", margin: "4px 0" }}>위치 찾는 중...</p>}
-        {error && <p style={styles.errorText}>{error}</p>}
-        {coords && !loading && (
-          <div style={styles.infoBox}>
-            <p style={{ margin: "4px 0" }}>
-              <strong>도시:</strong> {coords.label}
-              {coords.country && `, ${coords.country}`}
-            </p>
-            <p style={{ margin: "4px 0" }}><strong> 현재 시각:</strong> {cityNow}</p>
-          </div>
-        )}
-      </div>
-
-      {/* 날씨 정보 */}
-      <div style={{ marginTop: "4px" }}>
-        {weatherLoading && <p style={{ fontSize: "12px", margin: "4px 0"}}>날씨 불러오는 중...</p>}
-        {weatherError && <p style={styles.errorText}>{weatherError}</p>}
-
-        {/* 현재 날씨 */}
-        {currentWeather && !weatherLoading && !weatherError && (
-          <div style={styles.infoBox}>
-            <h3 style={{ margin: "4px 0 4px 0", fontSize: "12px" }}>{getWeatherEmoji(currentWeather.code)} 현재 날씨</h3>
-            <p style={{ margin: "4px 0" }}>
-              <strong>기온:</strong> {' '}
-              {currentWeather.temp != null 
-                ? `${Math.round(currentWeather.temp)}°C` 
-                : "-"}
-            </p>
-            <p style={{ margin: "4px 0" }}>
-              <strong>체감:</strong> {' '}
-              {currentWeather.feels != null 
-                ? `${Math.round(currentWeather.feels)}°C` 
-                : "-"} {' '}
-              | <strong>습도:</strong> {' '}
-              {currentWeather.humidity != null 
-                ? `${currentWeather.humidity}%` 
-                : "-"} {' '}
-              | <strong>바람:</strong> {' '}
-              {currentWeather.wind != null 
-                ? `${currentWeather.wind} m/s` 
-                : "-"}
-            </p>
-            {/* 자외선 지수 */}
-            {currentWeather.uvIndex != null && (
-              <p style={{ margin: "4px 0"}}>
-                <strong>자외선:</strong> {' '}
-                {(() => {
-                  const uv = getUVLevel(currentWeather.uvIndex);
-                  return (
-                    <span style={{ color: uv.color }}>
-                      {uv.emoji} {Math.round(currentWeather.uvIndex)} ({uv.level})
-                    </span>
-                  );
-                })()}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* 대기질 정보 */}
-        {airQuality && !weatherLoading && !weatherError && (
-          <div style={styles.infoBox}>
-            <h3 style={{ margin: "4px 0 4px 0", fontSize: "12px" }}>🌬️ 대기질</h3>
-            <p style={{ margin: "4px 0" }}>
-              <strong>종합지수:</strong> {' '}
-              {(() => {
-                const aqi = getAQILevel(airQuality.aqi);
-                return (
-                  <span style={{ color: aqi.color }}>
-                    {aqi.emoji} {Math.round(airQuality.aqi)} ({aqi.level})
-                  </span>
-                )
-              })()}
-            </p>
-            <p style={{ margin: "4px 0" }}>
-              <strong>미세먼지:</strong> {' '}
-              {airQuality.pm10 != null ? `${Math.round(airQuality.pm10)} μg/m³` : "-"} {' '}
-              | <strong>초미세먼지:</strong> {' '}
-              {airQuality.pm25 != null ? `${Math.round(airQuality.pm25)} μg/m³` : "-"}
-            </p>
-          </div>
-        )}            
-
-
-        {/* 탭으로 구성된 예보 정보 */}
-        {(dailyForecast.length > 0 || hourlyForecast.length > 0) && !weatherLoading && !weatherError && (
-          <div style={styles.tabContainer}>
-            {/* 탭 버튼들 */}
-            <div style={styles.tabButtons}>
-              <button
+          {/* 현재 날씨 + 대기질 정보 */}
+          {(currentWeather || airQuality) && !weatherLoading && !weatherError && (
+            <div 
+              style={{
+                marginTop: "4px",
+                padding: "0",
+                fontSize: "12px",
+                border: "2px solid #999",
+                borderRadius: "12px",
+                backgroundColor: "rgba(255,255,255,0.85)",
+                backdropFilter: "blur(10px)",
+                boxShadow: "rgba(0,0,0,0.1) 0 2px 10px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div
                 style={{
-                  ...styles.tabButton,
-                  ...(activeTab === "daily" ? styles.tabButtonActive : {})
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 0,
+                  width: "100%",
+                  position: "relative", // 가운데 라인 절대배치용
+                  borderRadius: "12px",
+                  overflow: "hidden",   // 둥근 모서리 안으로 라인 클리핑
                 }}
-                onClick={() => setActiveTab("daily")}
               >
-                📅 일기 예보
-              </button>
-              <button
-                style={{
-                  ...styles.tabButton,
-                  ...(activeTab === "hourly" ? styles.tabButtonActive : {})
-                }}
-                onClick={() => setActiveTab("hourly")}
-              >
-                🕐 시간별 예보
-              </button>
-            </div>
+                {/* 가운데 라인 */}
+                <div
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: "50%",
+                    width: "1px",
+                    transform: "translateX(-0.5px)", // 하위픽셀 보정
+                    background: "rgba(153,153,153,0.9)",
+                    pointerEvents: "none",
+                  }}
+                />
+                
+              {currentWeather && !weatherLoading && !weatherError && (
+                <div       
+                  style={{
+                    margin: 0,
+                    padding: "8px 6px",
+                    border: "none",
+                    borderTopLeftRadius: "12px",
+                    borderBottomLeftRadius: "12px",
+                    background: "rgba(255,255,255,0.85)",
+                    boxShadow: "rgba(0,0,0,0.06) 0 1px 4px",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 4px 0", fontSize: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{fontSize: "12px"}}>{getWeatherEmoji(currentWeather.code)}</span>
+                    현재 날씨
+                  </h3>
+                  <p style={{ margin: "0 0 4px 0", fontSize: "12px" }}>
+                    ▪{currentWeather.temp != null ? `${Math.round(currentWeather.temp)}°C` : "-"} (체감 {currentWeather.feels != null ? `${Math.round(currentWeather.feels)}°C` : "-"})
+                  </p>
+                  <p style={{ margin: "0 0 4px 0" }}>
+                    ▪습도 {currentWeather.humidity != null ? `${currentWeather.humidity}%` : "-"}
+                  </p>
+                  <p style={{ margin: "0 0 4px 0" }}>
+                    ▪바람 {currentWeather.wind != null ? `${currentWeather.wind} m/s` : "-"}</p>              
 
-            {/* 탭 내용 */}
-            <div style={styles.tabContent}>
-              {activeTab === "daily" && dailyForecast.length > 0 && (
-                <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
-                  {dailyForecast.map((day) => (
-                    <li key={day.date} style={{ marginBottom: "2px", fontSize: "12px"}}>
-                      {getWeatherEmoji(day.code)} <strong>{day.label}</strong> - {' '}
-                      {Math.round(day.tempMin)}° / {Math.round(day.tempMax)}°
-                    </li>
-                  ))}
-                </ul>
+                  {/* 자외선 지수 */}
+                  {currentWeather.uvIndex != null && (
+                    <div>
+                      <span style={{fontSize: "12px"}}>▪자외선: </span>
+                      {(() => {
+                        const uv = getUVLevel(currentWeather.uvIndex);
+                        return (
+                          <span style={{ color: uv.color, fontWeight: "bold", fontSize: "12px" }}>
+                            {uv.emoji} {Math.round(currentWeather.uvIndex)} ({uv.level})
+                          </span>
+                        );
+                      })()}
+                    </div>      
+                  )}
+                </div>
               )}
 
-              {activeTab === "hourly" && hourlyForecast.length > 0 && (
-                <ul style={{ paddingLeft: "10px", margin: "6px 0" }}>
-                  {hourlyForecast.map((hour, index) => (
-                    <li key={hour.time} style={{ marginBottom: "2px", fontSize: "12px"}}>
-                      <div style={{display:"flex", alignItems:"center", gap:"4px",flexWrap:"wrap"}}>
-                        <span>
-                          {getWeatherEmoji(hour.code)} <strong>{hour.hour}시</strong> ({hour.date}) - {' '}
-                          {Math.round(hour.temp)}°C
+              {/* 대기질 정보 */}
+              {airQuality && !weatherLoading && !weatherError && (
+                <div       
+                  style={{
+                    margin: 0,
+                    padding: "8px 6px",
+                    border: "none",
+                    borderTopRightRadius: "12px",
+                    borderBottomRightRadius: "12px",
+                    background: "rgba(255,255,255,0.85)",
+                    boxShadow: "rgba(0,0,0,0.06) 0 1px 4px",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 4px 0", fontSize: "12px" }}>🌬️ 대기질</h3>
+                  <div style={{marginBottom: "4px"}}>
+                    <span style={{ margin: "0 0 4px 0" }}>▪종합지수: </span>
+                    {(() => {
+                      const aqi = getAQILevel(airQuality.aqi);
+                      return (
+                        <span style={{ color: aqi.color, fontWeight: "bold" }}>
+                          {aqi.emoji} {Math.round(airQuality.aqi)} ({aqi.level})
                         </span>
-                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                          {hour.precipitation != null && hour.precipitation > 0 && (
-                            <span style={{ color: "#2563eb", fontSize: "11px" }}>🌧️ {hour.precipitation}%</span>
-                          )}
-                          {hour.uvIndex != null && hour.uvIndex > 0 && (  // 이 부분이 새로 추가됨
-                            <span style={{ fontSize: "11px" }}>
-                              {(() => {
-                                const uv = getUVLevel(hour.uvIndex);
-                                return (
-                                  <span style={{ color: uv.color }}>
-                                    ☀️ {Math.round(hour.uvIndex)} ({uv.level})
-                                  </span>
-                                );
-                              })()}
-                            </span>
-                          )}
+                      )
+                    })()}
+                  </div>
+                  <div style={{ margin: "0 0 4px 0" }}>▪미세먼지: {airQuality.pm10 != null ? `${Math.round(airQuality.pm10)} μg/m³` : "-"}</div>
+                  <div style={{ margin: "0 0 4px 0" }}>▪초미세먼지: {airQuality.pm25 != null ? `${Math.round(airQuality.pm25)} μg/m³` : "-"}</div>                  
+                </div>
+              )}
+                
+            </div>
+          </div>
+        )}               
+
+          {/* 탭으로 구성된 예보 정보 */}
+          {(dailyForecast.length > 0 || hourlyForecast.length > 0) && !weatherLoading && !weatherError && (
+            <div style={styles.tabContainer}>
+              {/* 탭 버튼들 */}
+              <div style={styles.tabButtons}>
+                <button
+                  style={{
+                    ...styles.tabButton,
+                    ...(activeTab === "daily" ? styles.tabButtonActive : {})
+                  }}
+                  onClick={() => setActiveTab("daily")}
+                >
+                  📅 일기 예보
+                </button>
+                <button
+                  style={{
+                    ...styles.tabButton,
+                    ...(activeTab === "hourly" ? styles.tabButtonActive : {})
+                  }}
+                  onClick={() => setActiveTab("hourly")}
+                >
+                  🕐 시간별 예보
+                </button>
+              </div>
+
+              {/* 탭 내용 */}
+              <div style={styles.tabContent}>
+                {activeTab === "daily" && dailyForecast.length > 0 && (
+                  <div>
+                    {dailyForecast.map((day) => (
+                      <div key={day.date} style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center",
+                        padding: "8px 0",
+                        borderBottom: "1px solid rgba(0,0,0,0.1)"
+                      }}>
+                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                          <span style={{fontSize: "14px"}}>{getWeatherEmoji(day.code)}</span>
+                          <span style={{fontWeight: "bold"}}>{day.label}</span>
+                        </div>
+                        <div style={{textAlign: "right"}}>
+                          <span style={{fontSize: "14px", fontWeight: "bold"}}>
+                            {Math.round(day.tempMax)}°
+                          </span>
+                          <span style={{fontSize: "14px", opacity: 0.7, marginLeft: "4px"}}>
+                            / {Math.round(day.tempMin)}°
+                          </span>
                         </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === "hourly" && hourlyForecast.length > 0 && (
+                  <div>
+                    {hourlyForecast.map((hour, index) => (
+                      <div key={hour.time} style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center",
+                        padding: "6px 0",
+                        borderBottom: index < hourlyForecast.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none"
+                      }}>
+                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                          <span style={{fontSize: "18px"}}>{getWeatherEmoji(hour.code)}</span>
+                          <div>
+                            <div style={{fontWeight: "bold"}}>{hour.hour}시</div>
+                            <div style={{fontSize: "10px", opacity: 0.7}}>{hour.date}</div>
+                          </div>
+                          <div style={{display: "flex", flexDirection: "column", gap: "2px"}}>
+                            {hour.precipitation != null && hour.precipitation > 0 && (
+                              <span style={{ color: "#2563eb", fontSize: "11px" }}>
+                                🌧️ {hour.precipitation}%
+                              </span>
+                            )}
+                            {hour.uvIndex != null && hour.uvIndex > 0 && (
+                              <span style={{ fontSize: "11px" }}>
+                                {(() => {
+                                  const uv = getUVLevel(hour.uvIndex);
+                                  return (
+                                    <span style={{ color: uv.color }}>
+                                      ☀️ {Math.round(hour.uvIndex)}
+                                    </span>
+                                  );
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                        </div>                                              
+                      <div style={{textAlign: "right", display: "flex", alignItems: "center", gap: "12px"}}>
+                        <span style={{ fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                          {Number.isFinite(hour.temp) ? `${Math.round(hour.temp)}°C` : "—°C"}
+                        </span>
+                      </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
