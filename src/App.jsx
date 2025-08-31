@@ -13,7 +13,7 @@ const getWeatherTheme = (weatherCode) => {
     return {
       background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 10%)",
       containerBg: "rgba(255, 255, 255, 0.9)",
-      borderColor: "4462858a",
+      borderColor: "#4462858a",
       textColor: "#333"
     };
   }
@@ -53,7 +53,7 @@ const getWeatherTheme = (weatherCode) => {
   if (code >= 45 && code <= 48) {
     return {
       background: "linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)",
-      containerBg: "rgba(255, 255, 255, 0.8",
+      containerBg: "rgba(255, 255, 255, 0.8)",
       borderColor: "#7fbc8d",
       textColor: "#2c3e50"
     };
@@ -84,7 +84,7 @@ const getWeatherTheme = (weatherCode) => {
     return {
       background: "linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%)",
       containerBg: "rgba(255, 255, 255, 0.95)",
-      borderColor: " #8e9eab80",
+      borderColor: "#8e9eab80",
       textColor: "#2c3e50"
     };
   }
@@ -266,7 +266,7 @@ export default function App() {
 
   // 키보드 네비게이션 핸들러
   const handleKeyDown = (e) => {
-    if (candidates.length == 0 ) return;
+    if (candidates.length === 0 ) return;
 
     switch (e.key) {
       case 'ArrowDown':
@@ -669,7 +669,7 @@ export default function App() {
     input: { 
       flex: 1,
       padding: "8px",
-      fontsize: "12px !important",
+      fontSize: "12px !important",
       border : `2px solid ${currentTheme.borderColor}`,
       height: "30px",
       backgroundColor: currentTheme.containerBg,
