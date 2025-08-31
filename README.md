@@ -1,6 +1,7 @@
 # 🌤️ 날씨날씨 — React + Vite Weather Mini App
 
-![CI](https://github.com/LeahKim-dev/Weather-mini/actions/workflows/deploy.yml/badge.svg)
+![CI + Deploy](https://github.com/LeahKim-dev/Weather-mini/actions/workflows/deploy.yml/badge.svg)
+
 > ☀️🌧️❄️ Open‑Meteo API + Geocoding + Air Quality · GitHub Pages 배포용 🌬️🌍
 
 ## 🚀 데모
@@ -18,6 +19,15 @@
 * ⭐ 즐겨찾기(최대 5개) & 🕑 최근 검색(최대 10개)
 * ⚠️ API 오류 시 **서울 좌표** 폴백
 
+```mermaid
+flowchart TD
+A[도시명 입력] --> B[Geocoding API]
+B -->|lat, lon| C[Weather API]
+B -->|lat, lon| D[Air Quality API]
+C --> E[현재 날씨/예보]
+D --> E
+E --> F[UI 렌더링]
+```
 ---
 
 ## 🛠 기술스택
@@ -46,6 +56,15 @@ npm run preview
 
 > 🗂 배포는 `dist/` 폴더의 정적 파일을 올리면 끝. (GitHub Pages/Netlify 등)
 
+```mermaid
+flowchart LR
+Dev[개발자] -->|git push| Repo[GitHub Repo]
+Repo --> CI[GitHub Actions]
+CI --> Build[npm run build → dist/]
+Build --> Pages[GitHub Pages]
+Pages --> User[브라우저]
+```
+
 ---
 
 ## 📜 스크립트
@@ -56,14 +75,22 @@ npm run preview
 
 ---
 
-## 📂 폴더 구조(요지)
+## 📂 폴더 구조
 
 ```
-├─ src/
-│  └─ App.jsx (현재 파일)
-├─ index.html
-├─ package.json
-└─ dist/ (npm run build 후 생성, 배포물)
+Weather-mini/
+├─ src/               # 소스 코드
+│ ├─ App.jsx          # 메인 앱 컴포넌트
+│ ├─ main.jsx         # React 엔트리 포인트
+│ ├─ index.css        # 전역 스타일
+│ └─ assets/          # 리소스
+│
+├─ public/            # 정적 파일
+├─ dist/      
+├─ index.html         # Vite 엔트리 HTML
+├─ package.json       # 의존성 및 스크립트
+├─ vite.config.js     # Vite 설정
+└─ README.md
 ```
 
 ---
@@ -80,22 +107,37 @@ npm run preview
 
 * 🏠 **User/Org 페이지**(`username.github.io`)면 `vite.config.[ts|js]`의 `base` 설정 불필요.
 * 📁 **프로젝트 페이지**(`username.github.io/repo`)면 `vite.config`에 `base: "/<repo>/"` 필요.
+  ```js
+  // vite.config.js
+  import { defineConfig } from 'vite'
+  import react from '@vitejs/plugin-react'
 
-### 2) Actions로 자동 배포(권장)
+  export default defineConfig({
+    plugins: [react()],
+    base: '/Weather-mini/',
+  })
+  ```
 
-`.github/workflows/pages.yml` 예시:
+### 2) GitHub Actions로 자동 배포
+
+루트에 `.github/workflows/deploy.yml` 파일 생성:
 
 ```yaml
-name: Deploy to GitHub Pages
+name: Deploy Vite site to GitHub Pages
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -105,12 +147,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: corepack enable
-      - run: npm ci || npm i
+          cache: 'npm'
+      - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -120,33 +163,43 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
 ```
 
-> 🔒 조직 정책으로 외부 Action이 막혀 있다면, 같은 리포 내에 `actions/checkout` 등 대체 워크플로를 vendor 하거나 **GitHub Enterprise 정책**을 완화해야 함.
+### 3) GitHub Pages 설정
+
+- 리포 **Settings → Pages → Source** 를 GitHub Actions로 변경
+
+- 이후 main 브랜치에 push하면 자동으로 빌드 + 배포됨
+
+### 4) 배지 추가 (README 상단에 넣기)
+![CI + Deploy](https://github.com/LeahKim-dev/Weather-mini/actions/workflows/deploy.yml/badge.svg)
 
 ---
 
-## 🌍 Open‑Meteo 엔드포인트(참고)
+## 🌍 Open‑Meteo 엔드포인트
 
-* 📍 ![Geocoding](https://geocoding-api.open-meteo.com/v1/search)
-* 🌦️ ![Forecast](https://api.open-meteo.com/v1/forecas)
-* 🌬️ ![Air Quality](https://air-quality-api.open-meteo.com/v1/air-quality)
+* 📍 Geocoding: https://geocoding-api.open-meteo.com/v1/search
+* 🌦️ Forecast: https://api.open-meteo.com/v1/forecast
+* 🌬️ Air Quality: https://air-quality-api.open-meteo.com/v1/air-quality
 
 요청 파라미터(본 앱에서 사용):
 
-* `current`: `temperature_2m, apparent_temperature, relative_humidity_2m, wind_speed_10m, weather_code, uv_index`
-* `daily`: `temperature_2m_max, temperature_2m_min, weather_code`
-* `hourly`: `temperature_2m, weather_code, precipitation_probability, uv_index`
-* `timezone=auto`, `forecast_days=14`
+| 구분    | 파라미터 목록 |
+|--------|-----------------------------------------------|
+| current | temperature_2m, apparent_temperature, relative_humidity_2m, wind_speed_10m, weather_code, uv_index |
+| daily   | temperature_2m_max, temperature_2m_min, weather_code |
+| hourly  | temperature_2m, weather_code, precipitation_probability, uv_index |
+| 기타    | timezone=auto, forecast_days=14 |
 
 ---
 
 ## 📝 사용법
 
-1️⃣ 상단 입력에 도시명 입력(예: `Seoul`, `Tokyo`, `Paris`) → 3글자 이상이면 자동완성
-2️⃣ 자동완성 목록에서 클릭 또는 키보드(↑/↓/Enter)
-3️⃣ 선택하면 현재 날씨/대기질 + 일간/시간별 탭이 표시됨
-4️⃣ 오류 시 서울 좌표로 폴백하여 예보 제공
+1. 상단 입력에 도시명 입력(예: `Seoul`, `Tokyo`, `Paris`) → 3글자 이상이면 자동완성
+2. 자동완성 목록에서 클릭 또는 키보드(↑/↓/Enter)
+3. 선택하면 현재 날씨/대기질 + 일간/시간별 탭이 표시됨
+4. 오류 시 서울 좌표로 폴백하여 예보 제공
 
 ---
 
